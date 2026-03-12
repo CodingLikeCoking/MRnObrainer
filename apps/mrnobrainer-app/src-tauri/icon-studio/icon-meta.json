@@ -1,0 +1,17 @@
+{
+  "recommendedVariant": "aperture-core",
+  "variants": [
+    "aperture-core",
+    "sentinel-aperture",
+    "viewport-claw"
+  ],
+  "proofSizes": [
+    16,
+    24,
+    32,
+    64,
+    128,
+    512,
+    1024
+  ]
+}

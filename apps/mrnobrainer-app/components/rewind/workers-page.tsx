@@ -1,0 +1,65 @@
+"use client";
+
+import { Server, Waypoints } from "lucide-react";
+
+import { OpenClawCard } from "@/components/settings/openclaw-card";
+import { ClawFleetCard } from "@/components/settings/claw-fleet-card";
+import { useSettings } from "@/lib/hooks/use-settings";
+import { getDefaultRewindSettings } from "@/lib/rewind/home-model";
+
+export function WorkersPage() {
+  const { settings, updateSettings } = useSettings();
+  const rewindSettings = { ...getDefaultRewindSettings(), ...(settings.rewind || {}) };
+
+  return (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 pb-12">
+      <section className="rounded-3xl border border-border/60 bg-background/95 p-6">
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
+            <Server className="h-5 w-5 text-foreground" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Workers
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              Keep this Mac as the Oracle
+            </h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Workers receive context and run longer automations without interrupting the machine
+              you are actively using. Import an existing OpenClaw host, then keep the actual
+              pairing steps explicit and reversible.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-border/60 bg-muted/20 p-5">
+        <div className="flex items-start gap-3">
+          <Waypoints className="mt-0.5 h-4 w-4 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            v1 only does guided import, validation, and generated commands. It does not
+            auto-provision or mutate the remote host.
+          </p>
+        </div>
+      </section>
+
+      <OpenClawCard />
+
+      <ClawFleetCard
+        claws={rewindSettings.claws}
+        guardrails={rewindSettings.automationGuardrails}
+        onPersist={async (updates) =>
+          updateSettings({
+            rewind: {
+              ...rewindSettings,
+              claws: updates.claws ?? rewindSettings.claws,
+              automationGuardrails:
+                updates.automationGuardrails ?? rewindSettings.automationGuardrails,
+            },
+          })
+        }
+      />
+    </div>
+  );
+}

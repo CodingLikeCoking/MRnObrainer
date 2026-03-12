@@ -1,0 +1,68 @@
+{
+  "dateKey": "2026-03-06",
+  "timezone": "Asia/Hong_Kong",
+  "generatedAt": "2026-03-06T12:00:00.000Z",
+  "headline": "Closed the loop on the Screenpipe pivot",
+  "oneLiner": "Turned the migration plan into an executable pipe bundle.",
+  "narrativeSummary": "Most of the day went into turning the Rewind-on-Screenpipe plan into something runnable, with attention on keeping the implementation local-first, auditable, and deterministic.",
+  "highlights": [
+    "Mapped the Rewind daily review contract onto Screenpipe pipes",
+    "Locked a deterministic local state model for level and streak",
+    "Set up the Notion publishing surface without introducing duplicate pages"
+  ],
+  "keyMoments": [
+    {
+      "timestamp": "2026-03-06T09:00:00.000Z",
+      "label": "Settled on a pipe-first implementation path"
+    },
+    {
+      "timestamp": "2026-03-06T11:40:00.000Z",
+      "label": "Finished the first end-to-end artifact contract"
+    }
+  ],
+  "tasks": [
+    "Implement the prepare-evidence helper",
+    "Finalize the markdown renderer",
+    "Publish the daily review to Notion"
+  ],
+  "meetings": [
+    "Reviewed the Screenpipe migration direction"
+  ],
+  "blockers": [
+    "Need stable artifact validation before relying on AI-generated outputs"
+  ],
+  "topApps": [
+    {
+      "appName": "Cursor",
+      "minutes": 180
+    },
+    {
+      "appName": "Arc",
+      "minutes": 45
+    }
+  ],
+  "focusMinutesEstimate": 155,
+  "sourceStats": {
+    "allCount": 24,
+    "inputCount": 8,
+    "appCount": 2
+  },
+  "sourceApps": [
+    "Cursor",
+    "Arc"
+  ],
+  "sourceDevices": [
+    "screenpipe-local"
+  ],
+  "rpg": {
+    "xpEarned": 88,
+    "focusXp": 28,
+    "deepWorkXp": 24,
+    "learningXp": 18,
+    "communicationXp": 18,
+    "statusLabel": "Momentum held",
+    "rationale": "Strong planning and implementation work with one long focus block and limited context switching.",
+    "level": 3,
+    "streakDays": 2
+  }
+}

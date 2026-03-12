@@ -1,0 +1,56 @@
+name: Risk Classifier
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  classify-and-check:
+    name: Classify Risk And Check Evidence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Classify changed files
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            windowing:
+              - 'apps/mrnobrainer-app/app/**'
+              - 'apps/mrnobrainer-app/components/**'
+              - 'apps/mrnobrainer-app/src-tauri/**'
+            capture:
+              - 'crates/screenpipe-server/**'
+              - 'crates/screenpipe-core/**'
+              - 'crates/screenpipe-audio/**'
+            oss_surface:
+              - 'README.md'
+              - 'README-ja.md'
+              - 'README-zh_CN.md'
+              - 'docs/**'
+              - 'apps/mrnobrainer-app/lib/oss-public.ts'
+              - 'apps/mrnobrainer-app/public/**'
+              - 'crates/screenpipe-vision/tests/**'
+
+      - name: Summarize matched groups
+        shell: bash
+        run: |
+          {
+            echo "### Risk classification"
+            echo
+            echo "- windowing: ${{ steps.changes.outputs.windowing }}"
+            echo "- capture: ${{ steps.changes.outputs.capture }}"
+            echo "- oss_surface: ${{ steps.changes.outputs.oss_surface }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check required evidence for risky changes
+        env:
+          RISK_WINDOWING: ${{ steps.changes.outputs.windowing }}
+          RISK_CAPTURE: ${{ steps.changes.outputs.capture }}
+          RISK_OSS_SURFACE: ${{ steps.changes.outputs.oss_surface }}
+        run: bash .github/scripts/check-risk-evidence.sh

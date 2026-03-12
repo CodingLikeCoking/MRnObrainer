@@ -1,0 +1,23 @@
+# Default ownership for protected review.
+* @CodingLikeCoking
+
+# Core repo policy and release surfaces.
+/AGENTS.md @CodingLikeCoking
+/README.md @CodingLikeCoking
+/CONTRIBUTING.md @CodingLikeCoking
+/docs/** @CodingLikeCoking
+/.github/** @CodingLikeCoking
+
+# Desktop app and UI.
+/apps/mrnobrainer-app/** @CodingLikeCoking
+
+# Runtime and server.
+/crates/screenpipe-server/** @CodingLikeCoking
+/crates/screenpipe-core/** @CodingLikeCoking
+/crates/screenpipe-audio/** @CodingLikeCoking
+/crates/screenpipe-db/** @CodingLikeCoking
+/crates/screenpipe-vision/** @CodingLikeCoking
+
+# JS packages and agent-facing integrations.
+/packages/** @CodingLikeCoking
+/pipes/** @CodingLikeCoking

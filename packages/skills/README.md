@@ -1,0 +1,85 @@
+# @screenpipe/skills
+
+**Skills for AI agents that work with MRnObrainer or Screenpipe-compatible
+data.**
+
+One-liner to install skills to your AI agent (OpenClaw, Claude Code,
+etc). Your agent can then query local screen history, get daily
+digests, and search memories.
+
+> Compatibility note
+> Package names remain `@screenpipe/*` for runtime compatibility. The
+> shipping product and public docs in this repository use the
+> MRnObrainer name.
+
+## Quick Start
+
+```bash
+# Install to remote agent (e.g., OpenClaw)
+bunx @screenpipe/skills install --remote openclaw
+
+# Install locally
+bunx @screenpipe/skills install
+
+# List available skills
+bunx @screenpipe/skills list
+```
+
+## Skills Included
+
+| Skill | Trigger | What it does |
+| ----- | ------- | ------------ |
+| **recall** | "What was I doing at 3pm?" | Query screen history by time |
+| **search** | "Find when I saw error 404" | Full-text search memories |
+| **digest** | "What did I work on today?" | Daily activity summaries |
+| **context** | "Context for the auth refactor" | Get context for a topic |
+
+## Requirements
+
+- A local MRnObrainer or compatible Screenpipe runtime running on your machine
+- Screen data synced to agent via `bunx @screenpipe/sync --daemon`
+- SQLite3 available on the agent
+
+## Full Setup
+
+```bash
+# 1. Sync your screen data to the agent
+bunx @screenpipe/sync --daemon --remote openclaw:~/.screenpipe/
+
+# 2. Install skills
+bunx @screenpipe/skills install --remote openclaw
+
+# 3. Ask your agent
+"What was I doing at 3pm yesterday?"
+"Find when I last saw the budget spreadsheet"
+"Summarize my work today"
+```
+
+## How It Works
+
+Skills are markdown files that teach your AI agent how to query the
+local capture database:
+
+```sql
+-- Example: Get today's app usage
+SELECT app_name, COUNT(*) as frames
+FROM ocr_text o
+JOIN frames f ON o.frame_id = f.id
+WHERE date(f.timestamp) = date('now')
+GROUP BY app_name
+ORDER BY frames DESC;
+```
+
+The agent reads these skill files and uses them to answer your
+questions about your screen history.
+
+## License
+
+MIT - Source of record: [MRnObrainer](https://github.com/CodingLikeCoking/MRnObrainer)
+
+## Contributing
+
+Follow [CONTRIBUTING.md](../../CONTRIBUTING.md) and
+[docs/CHANGE_RULES.md](../../docs/CHANGE_RULES.md). Do not include real
+captured data, secrets, or unredacted screenshots in public examples or
+issue reports.

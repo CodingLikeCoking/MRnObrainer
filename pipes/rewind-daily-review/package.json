@@ -1,0 +1,8 @@
+{
+  "name": "@screenpipe/rewind-daily-review-pipe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

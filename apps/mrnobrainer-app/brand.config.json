@@ -1,0 +1,12 @@
+{
+  "appName": "MRnObrainer",
+  "planNameSuffix": "Pro",
+  "betaNameSuffix": "Beta",
+  "repository": "CodingLikeCoking/MRnObrainer",
+  "legacyRepository": "CodingLikeCoking/NoBrainer",
+  "cloudBaseUrl": "https://screenpi.pe",
+  "localApiOrigin": "http://localhost:3030",
+  "localWorkerOrigin": "http://localhost:3100",
+  "tagline": "Your Mac becomes a local memory and automation layer for your real work.",
+  "bundleShortDescription": "Action-first memory for your desktop"
+}

@@ -1,0 +1,63 @@
+<svg width="1280" height="320" viewBox="0 0 1280 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="surface" x1="120" y1="32" x2="1160" y2="288" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBF7F0"/>
+      <stop offset="1" stop-color="#EEF1EA"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#18211D"/>
+      <stop offset="1" stop-color="#5B796D"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="320" rx="32" fill="url(#surface)"/>
+  <rect x="24" y="24" width="1232" height="272" rx="24" stroke="#D9D6CE"/>
+
+  <g>
+    <rect x="72" y="92" width="232" height="136" rx="28" fill="#FFFDF9" stroke="#DAD3C8"/>
+    <circle cx="126" cy="138" r="24" fill="#E8ECE3"/>
+    <rect x="110" y="128" width="32" height="20" rx="10" fill="url(#ink)"/>
+    <text x="164" y="126" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700">1. Capture</text>
+    <text x="110" y="167" fill="#121412" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700">Watch the day</text>
+    <text x="110" y="194" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Screen, audio, and app context stay</text>
+    <text x="110" y="214" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">searchable on the device by default.</text>
+  </g>
+
+  <path d="M332 160H402" stroke="#97AA9D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M390 148L402 160L390 172" stroke="#97AA9D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g>
+    <rect x="424" y="92" width="232" height="136" rx="28" fill="#FFFDF9" stroke="#DAD3C8"/>
+    <circle cx="478" cy="138" r="24" fill="#E8ECE3"/>
+    <path d="M468 145C474 137 483 133 492 133" stroke="url(#ink)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M468 157C476 149 487 145 498 145" stroke="url(#ink)" stroke-width="4" stroke-linecap="round"/>
+    <text x="516" y="126" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700">2. Understand</text>
+    <text x="462" y="167" fill="#121412" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700">Spot patterns</text>
+    <text x="462" y="194" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">The app looks for repeated routines,</text>
+    <text x="462" y="214" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">handoffs, and hidden admin loops.</text>
+  </g>
+
+  <path d="M684 160H754" stroke="#97AA9D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M742 148L754 160L742 172" stroke="#97AA9D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g>
+    <rect x="776" y="92" width="232" height="136" rx="28" fill="#FFFDF9" stroke="#DAD3C8"/>
+    <circle cx="830" cy="138" r="24" fill="#E8ECE3"/>
+    <rect x="817" y="126" width="26" height="24" rx="8" fill="url(#ink)"/>
+    <text x="868" y="126" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700">3. Suggest</text>
+    <text x="814" y="167" fill="#121412" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700">Draft safely</text>
+    <text x="814" y="194" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Suggestions arrive with evidence and</text>
+    <text x="814" y="214" fill="#5C645D" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">stay reviewable before you enable them.</text>
+  </g>
+
+  <path d="M1036 160H1106" stroke="#97AA9D" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1094 148L1106 160L1094 172" stroke="#97AA9D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g>
+    <rect x="1128" y="92" width="96" height="136" rx="28" fill="#111312"/>
+    <text x="1176" y="126" text-anchor="middle" fill="#C8D2C8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700">4. Run</text>
+    <text x="1176" y="168" text-anchor="middle" fill="#FFFDF8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="700">This Mac</text>
+    <text x="1176" y="194" text-anchor="middle" fill="#D2DCCF" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">or</text>
+    <text x="1176" y="218" text-anchor="middle" fill="#FFFDF8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="700">OpenClaw</text>
+  </g>
+</svg>
