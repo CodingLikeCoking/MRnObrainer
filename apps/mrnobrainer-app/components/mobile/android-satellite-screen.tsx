@@ -6,12 +6,11 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { Loader2, RefreshCw, ShieldCheck, Smartphone, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -20,7 +19,10 @@ import { Textarea } from "@/components/ui/textarea";
 type PairingState = {
   paired: boolean;
   oracleDeviceName: string | null;
+  oracleDeviceId?: string | null;
   serverUrl: string | null;
+  deviceId?: string;
+  deviceName?: string;
   liveCaptureEnabled: boolean;
   lastSyncAt: string | null;
 };
@@ -37,6 +39,8 @@ type RecentEvent = {
   title: string;
   detail: string | null;
   occurredAt: string;
+  synced?: boolean;
+  appName?: string | null;
 };
 
 type SyncResult = {
@@ -48,7 +52,10 @@ type SyncResult = {
 const defaultPairingState: PairingState = {
   paired: false,
   oracleDeviceName: null,
+  oracleDeviceId: null,
   serverUrl: null,
+  deviceId: "android-satellite",
+  deviceName: "Android Satellite",
   liveCaptureEnabled: false,
   lastSyncAt: null,
 };
@@ -62,9 +69,37 @@ const defaultPermissionStatus: PermissionStatus = {
 function formatTimestamp(value: string | null) {
   if (!value) return "never";
 
-  const date = new Date(value);
+  const normalizedValue = /^\d+$/.test(value) ? Number.parseInt(value, 10) : value;
+  const date = new Date(normalizedValue);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
+}
+
+function validatePairingPayload(rawPayload: string) {
+  const trimmedPayload = rawPayload.trim();
+  if (!trimmedPayload) {
+    return { ok: false as const, error: "paste the oracle pair payload first" };
+  }
+
+  let parsedPayload: Record<string, unknown>;
+  try {
+    parsedPayload = JSON.parse(trimmedPayload) as Record<string, unknown>;
+  } catch {
+    return { ok: false as const, error: "invalid pairing payload json" };
+  }
+
+  const serverUrl =
+    typeof parsedPayload.serverUrl === "string" ? parsedPayload.serverUrl.trim() : "";
+  const token = typeof parsedPayload.token === "string" ? parsedPayload.token.trim() : "";
+
+  if (!serverUrl || !token) {
+    return {
+      ok: false as const,
+      error: "pair payload must include non-empty serverUrl and token",
+    };
+  }
+
+  return { ok: true as const, payload: trimmedPayload };
 }
 
 function PermissionBadge({
@@ -95,6 +130,22 @@ export function AndroidSatelliteScreen() {
   const [isToggling, setIsToggling] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
 
+  const queueSummary = useMemo(
+    () =>
+      recentEvents.reduce(
+        (summary, event) => {
+          if (event.synced === true) {
+            summary.sent += 1;
+          } else {
+            summary.queued += 1;
+          }
+          return summary;
+        },
+        { queued: 0, sent: 0 },
+      ),
+    [recentEvents],
+  );
+
   const loadState = async () => {
     setIsLoading(true);
     setStatusMessage(null);
@@ -121,8 +172,9 @@ export function AndroidSatelliteScreen() {
   }, []);
 
   const handlePair = async () => {
-    if (!pairingPayload.trim()) {
-      setStatusMessage("paste the oracle pair payload first");
+    const validation = validatePairingPayload(pairingPayload);
+    if (!validation.ok) {
+      setStatusMessage(validation.error);
       return;
     }
 
@@ -131,7 +183,7 @@ export function AndroidSatelliteScreen() {
 
     try {
       const nextState = await invoke<PairingState>("pair_oracle", {
-        pairingPayload: pairingPayload.trim(),
+        pairingPayload: validation.payload,
       });
       setPairingState(nextState);
       setPairingPayload("");
@@ -172,6 +224,16 @@ export function AndroidSatelliteScreen() {
           lastSyncAt: result.lastSyncAt,
         }));
       }
+      setRecentEvents((current) =>
+        current.map((event) =>
+          event.synced === true
+            ? event
+            : {
+                ...event,
+                synced: true,
+              },
+        ),
+      );
       setStatusMessage(`synced ${result.syncedCount} event${result.syncedCount === 1 ? "" : "s"}`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "sync failed");
@@ -236,6 +298,18 @@ export function AndroidSatelliteScreen() {
               </div>
             </div>
             <div className="grid gap-3 rounded-3xl border border-border/60 bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">device</span>
+                <span className="text-sm font-medium">
+                  {pairingState.deviceName ?? defaultPairingState.deviceName}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted-foreground">device id</span>
+                <span className="font-mono text-xs">
+                  {pairingState.deviceId ?? defaultPairingState.deviceId}
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted-foreground">oracle</span>
                 <Badge variant={pairingState.paired ? "default" : "outline"}>
@@ -361,9 +435,14 @@ export function AndroidSatelliteScreen() {
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-medium">Recent device events</p>
-                <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                  {recentEvents.length}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                    {queueSummary.queued} queued
+                  </Badge>
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                    {queueSummary.sent} sent
+                  </Badge>
+                </div>
               </div>
               <div className="grid gap-2">
                 {recentEvents.length > 0 ? (
@@ -378,8 +457,16 @@ export function AndroidSatelliteScreen() {
                           {event.detail ? (
                             <p className="mt-1 text-sm text-muted-foreground">{event.detail}</p>
                           ) : null}
+                          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {event.appName ?? "android satellite"}
+                          </p>
                         </div>
-                        <Badge variant="outline">{event.kind}</Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline">{event.kind}</Badge>
+                          <Badge variant={event.synced === true ? "secondary" : "default"}>
+                            {event.synced === true ? "sent" : "queued"}
+                          </Badge>
+                        </div>
                       </div>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {formatTimestamp(event.occurredAt)}
