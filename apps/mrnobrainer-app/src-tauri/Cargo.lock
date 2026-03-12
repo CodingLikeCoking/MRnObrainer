@@ -9071,6 +9071,7 @@ dependencies = [
  "icalendar",
  "image 0.25.9",
  "ini",
+ "jni",
  "lazy_static",
  "log",
  "md5",
