@@ -750,10 +750,9 @@ pub async fn show_shortcut_reminder(
 
     info!("show_shortcut_reminder called");
 
-    // Window dimensions: 2-row layout (shortcuts + activity visualization)
-    // Keep tight — content is ~150px wide; extra space causes visible gap on some displays.
-    let window_width = 170.0;
-    let window_height = 40.0;
+    // Window dimensions: 2-row layout plus outer padding for the glass shell.
+    let window_width = 196.0;
+    let window_height = 64.0;
 
     // Position at top center of the screen where the cursor is
     let (x, y) = {
@@ -925,7 +924,7 @@ pub async fn show_shortcut_reminder(
             if let Ok(Some(monitor)) = app_handle_clone.primary_monitor() {
                 let screen_size = monitor.size();
                 let scale_factor = monitor.scale_factor();
-                let new_x = ((screen_size.width as f64 / scale_factor) - 220.0) / 2.0;
+                let new_x = ((screen_size.width as f64 / scale_factor) - window_width) / 2.0;
                 let new_y = 12.0;
 
                 if let Some(window) = app_handle_clone.get_webview_window("shortcut-reminder") {
@@ -965,8 +964,10 @@ pub async fn show_notification_panel(
 
     info!("show_notification_panel called");
 
-    let window_width = 320.0;
-    let window_height = 180.0;
+    // The glass panel now includes an outer inset, so the native window needs
+    // extra room to avoid clipping the rounded shell and progress bar.
+    let window_width = 344.0;
+    let window_height = 208.0;
 
     // Position at top-right of the screen where the cursor is
     let (x, y) = {

@@ -105,14 +105,35 @@ function validatePairingPayload(rawPayload: string) {
 function PermissionBadge({
   label,
   ready,
+  actionLabel,
+  onAction,
+  isWorking = false,
 }: {
   label: string;
   ready: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
+  isWorking?: boolean;
 }) {
   return (
     <div className="glass-chip flex items-center justify-between px-4 py-3">
       <span className="text-sm font-medium text-foreground/90">{label}</span>
-      <Badge variant={ready ? "default" : "outline"}>{ready ? "ready" : "needed"}</Badge>
+      <div className="flex items-center gap-2">
+        {ready ? null : actionLabel && onAction ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 text-xs font-medium"
+            onClick={onAction}
+            disabled={isWorking}
+          >
+            {isWorking ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+            {actionLabel}
+          </Button>
+        ) : null}
+        <Badge variant={ready ? "default" : "outline"}>{ready ? "ready" : "needed"}</Badge>
+      </div>
     </div>
   );
 }
@@ -129,6 +150,9 @@ export function AndroidSatelliteScreen() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [activePermissionAction, setActivePermissionAction] = useState<
+    "notification" | "usage" | null
+  >(null);
 
   const queueSummary = useMemo(
     () =>
@@ -171,6 +195,43 @@ export function AndroidSatelliteScreen() {
     loadState();
   }, []);
 
+  useEffect(() => {
+    const refreshOnReturn = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+      void loadState();
+    };
+
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+    return () => {
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
+  }, []);
+
+  const requiredPermissionsReady =
+    permissionStatus.notificationAccess && permissionStatus.usageAccess;
+
+  const describeMissingPermissions = () => {
+    const missing: string[] = [];
+    if (!permissionStatus.notificationAccess) {
+      missing.push("notification access");
+    }
+    if (!permissionStatus.usageAccess) {
+      missing.push("usage access");
+    }
+
+    if (missing.length === 0) {
+      return null;
+    }
+    if (missing.length === 1) {
+      return `grant ${missing[0]} before enabling live memory`;
+    }
+    return `grant ${missing[0]} and ${missing[1]} before enabling live memory`;
+  };
+
   const handlePair = async () => {
     const validation = validatePairingPayload(pairingPayload);
     if (!validation.ok) {
@@ -197,6 +258,11 @@ export function AndroidSatelliteScreen() {
   };
 
   const handleToggleLiveCapture = async (enabled: boolean) => {
+    if (enabled && !requiredPermissionsReady) {
+      setStatusMessage(describeMissingPermissions());
+      return;
+    }
+
     setIsToggling(true);
     setStatusMessage(null);
 
@@ -209,6 +275,48 @@ export function AndroidSatelliteScreen() {
       setStatusMessage(error instanceof Error ? error.message : "failed to update live memory");
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  const handleRequestNotificationAccess = async () => {
+    setActivePermissionAction("notification");
+    setStatusMessage(null);
+
+    try {
+      const nextStatus = await invoke<PermissionStatus>("request_notification_access");
+      setPermissionStatus(nextStatus);
+      setStatusMessage(
+        nextStatus.notificationAccess
+          ? "notification access ready"
+          : "opened notification access settings. enable the listener, then return here",
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error ? error.message : "failed to open notification access settings",
+      );
+    } finally {
+      setActivePermissionAction(null);
+    }
+  };
+
+  const handleOpenUsageAccessSettings = async () => {
+    setActivePermissionAction("usage");
+    setStatusMessage(null);
+
+    try {
+      const nextStatus = await invoke<PermissionStatus>("open_usage_access_settings");
+      setPermissionStatus(nextStatus);
+      setStatusMessage(
+        nextStatus.usageAccess
+          ? "usage access ready"
+          : "opened usage access settings. allow usage access, then return here",
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error ? error.message : "failed to open usage access settings",
+      );
+    } finally {
+      setActivePermissionAction(null);
     }
   };
 
@@ -415,8 +523,20 @@ export function AndroidSatelliteScreen() {
                 <p className="text-sm font-medium">Permissions</p>
               </div>
               <div className="grid gap-2">
-                <PermissionBadge label="notification access" ready={permissionStatus.notificationAccess} />
-                <PermissionBadge label="usage access" ready={permissionStatus.usageAccess} />
+                <PermissionBadge
+                  label="notification access"
+                  ready={permissionStatus.notificationAccess}
+                  actionLabel="open notification access"
+                  onAction={handleRequestNotificationAccess}
+                  isWorking={activePermissionAction === "notification"}
+                />
+                <PermissionBadge
+                  label="usage access"
+                  ready={permissionStatus.usageAccess}
+                  actionLabel="open usage access settings"
+                  onAction={handleOpenUsageAccessSettings}
+                  isWorking={activePermissionAction === "usage"}
+                />
                 <PermissionBadge label="background sync" ready={permissionStatus.backgroundSyncReady} />
               </div>
             </div>

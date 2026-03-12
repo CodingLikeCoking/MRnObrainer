@@ -98,6 +98,9 @@ icalendar = "0.17"
 tauri-plugin-single-instance = { version = "2.3.7", features = ["deep-link"] }
 tauri-plugin-updater = "2.10.0"
 
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 tracing-oslog = "0.3.0"
 core-foundation = "0.10"

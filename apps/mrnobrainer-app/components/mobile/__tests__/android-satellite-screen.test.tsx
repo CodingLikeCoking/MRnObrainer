@@ -33,8 +33,8 @@ describe("AndroidSatelliteScreen", () => {
 
       if (command === "get_permission_status") {
         return {
-          notificationAccess: false,
-          usageAccess: false,
+          notificationAccess: true,
+          usageAccess: true,
           backgroundSyncReady: true,
         };
       }
@@ -301,5 +301,127 @@ describe("AndroidSatelliteScreen", () => {
     expect(
       invokeMock.mock.calls.find(([command]) => command === "pair_oracle")
     ).toBeUndefined();
+  });
+
+  it("blocks live memory until Android notification and usage access are granted", async () => {
+    invokeMock.mockImplementation(async (command: string, payload?: Record<string, unknown>) => {
+      if (command === "get_pairing_state") {
+        return {
+          paired: true,
+          oracleDeviceName: "MacBook Air Oracle",
+          serverUrl: "http://192.168.1.8:3030",
+          liveCaptureEnabled: false,
+          lastSyncAt: null,
+        };
+      }
+
+      if (command === "get_permission_status") {
+        return {
+          notificationAccess: false,
+          usageAccess: false,
+          backgroundSyncReady: true,
+        };
+      }
+
+      if (command === "list_recent_events") {
+        return [];
+      }
+
+      if (command === "set_live_capture_enabled") {
+        expect(payload).toEqual({ enabled: true });
+        return {
+          paired: true,
+          oracleDeviceName: "MacBook Air Oracle",
+          serverUrl: "http://192.168.1.8:3030",
+          liveCaptureEnabled: true,
+          lastSyncAt: "2026-03-12T09:20:00.000Z",
+        };
+      }
+
+      throw new Error(`unexpected command ${command}`);
+    });
+
+    render(<AndroidSatelliteScreen />);
+
+    expect(await screen.findAllByText("needed")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /enable live device memory/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/grant notification access and usage access before enabling live memory/i),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      invokeMock.mock.calls.find(([command]) => command === "set_live_capture_enabled"),
+    ).toBeUndefined();
+  });
+
+  it("opens Android permission actions and refreshes the permission badges", async () => {
+    let notificationRequested = false;
+    let usageSettingsOpened = false;
+
+    invokeMock.mockImplementation(async (command: string) => {
+      if (command === "get_pairing_state") {
+        return {
+          paired: true,
+          oracleDeviceName: "MacBook Air Oracle",
+          serverUrl: "http://192.168.1.8:3030",
+          liveCaptureEnabled: false,
+          lastSyncAt: null,
+        };
+      }
+
+      if (command === "get_permission_status") {
+        return {
+          notificationAccess: notificationRequested,
+          usageAccess: usageSettingsOpened,
+          backgroundSyncReady: true,
+        };
+      }
+
+      if (command === "list_recent_events") {
+        return [];
+      }
+
+      if (command === "request_notification_access") {
+        notificationRequested = true;
+        return {
+          notificationAccess: true,
+          usageAccess: usageSettingsOpened,
+          backgroundSyncReady: true,
+        };
+      }
+
+      if (command === "open_usage_access_settings") {
+        usageSettingsOpened = true;
+        return {
+          notificationAccess: notificationRequested,
+          usageAccess: true,
+          backgroundSyncReady: true,
+        };
+      }
+
+      throw new Error(`unexpected command ${command}`);
+    });
+
+    render(<AndroidSatelliteScreen />);
+
+    expect(await screen.findAllByText("needed")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /open notification access/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /open notification access/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /open usage access settings/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /open usage access settings/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /open usage access settings/i })).not.toBeInTheDocument();
+      expect(screen.getAllByText("ready")).toHaveLength(3);
+    });
   });
 });

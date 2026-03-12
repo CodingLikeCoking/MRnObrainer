@@ -156,6 +156,24 @@ unsafe fn apply_macos_glass_titlebar(
     ];
 }
 
+#[cfg(target_os = "macos")]
+fn apply_macos_glass_to_window(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    movable_by_background: bool,
+) {
+    use tauri_nspanel::cocoa::base::id as cocoa_id;
+
+    let window = window.clone();
+    run_on_main_thread_safe(app, move || {
+        if let Ok(ns_window) = window.ns_window() {
+            unsafe {
+                apply_macos_glass_titlebar(ns_window as cocoa_id, movable_by_background);
+            }
+        }
+    });
+}
+
 use crate::{
     store::{OnboardingStore, SettingsStore},
     ServerState,
@@ -998,6 +1016,8 @@ impl ShowRewindWindow {
                         .eval(&format!("window.location.replace(`/search/{}`);", query))
                         .ok();
                 }
+                #[cfg(target_os = "macos")]
+                apply_macos_glass_to_window(app, &window, false);
                 window.show().ok();
                 return Ok(window);
             }
@@ -1022,6 +1042,7 @@ impl ShowRewindWindow {
                     use tauri_nspanel::cocoa::base::{id as cocoa_id, nil as cocoa_nil};
                     if let Ok(ns_win) = window.ns_window() {
                         unsafe {
+                            apply_macos_glass_titlebar(ns_win as cocoa_id, false);
                             // Activate the app so it comes to the foreground
                             let ns_app: cocoa_id =
                                 msg_send![objc::class!(NSApplication), sharedApplication];
@@ -1074,6 +1095,9 @@ impl ShowRewindWindow {
 
                         if let Ok(panel) = app_clone.get_webview_panel(RewindWindowId::Chat.label())
                         {
+                            unsafe {
+                                apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
+                            }
                             if chat_on_top {
                                 panel.set_level(1001);
                                 // NonActivatingPanel (128) so clicking doesn't activate app
@@ -1129,6 +1153,8 @@ impl ShowRewindWindow {
 
             info!("showing window: {:?}", id.label());
 
+            #[cfg(target_os = "macos")]
+            apply_macos_glass_to_window(app, &window, false);
             window.show().ok();
             return Ok(window);
         }
@@ -1707,6 +1733,8 @@ impl ShowRewindWindow {
                 #[cfg(target_os = "macos")]
                 let builder = builder.hidden_title(true);
                 let window = builder.build()?;
+                #[cfg(target_os = "macos")]
+                apply_macos_glass_to_window(app, &window, false);
                 window
             }
             ShowRewindWindow::Search { query } => {
@@ -1722,6 +1750,8 @@ impl ShowRewindWindow {
                 #[cfg(target_os = "macos")]
                 let builder = builder.hidden_title(true);
                 let window = builder.build()?;
+                #[cfg(target_os = "macos")]
+                apply_macos_glass_to_window(app, &window, false);
 
                 window
             }
@@ -1749,6 +1779,8 @@ impl ShowRewindWindow {
                     .maximizable(false)
                     .focused(true);
                 let window = builder.build()?;
+                #[cfg(target_os = "macos")]
+                apply_macos_glass_to_window(app, &window, false);
 
                 window
             }
@@ -1787,6 +1819,9 @@ impl ShowRewindWindow {
                             use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
 
                             if let Ok(panel) = window_clone.to_panel() {
+                                unsafe {
+                                    apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
+                                }
                                 let chat_on_top = SettingsStore::get(window_clone.app_handle())
                                     .unwrap_or_default()
                                     .unwrap_or_default()
