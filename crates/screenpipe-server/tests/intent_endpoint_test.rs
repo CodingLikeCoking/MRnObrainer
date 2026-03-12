@@ -173,6 +173,8 @@ mod tests {
             element_automation_id: None,
             element_bounds: None,
             frame_id: Some(gmail_frame_2),
+            machine_id: None,
+            sync_id: None,
         })
         .await
         .unwrap();

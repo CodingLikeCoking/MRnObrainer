@@ -4,10 +4,12 @@
 "use client";
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
+
+const storage = new Map<string, string>();
 
 function ThemeProbe() {
   const { theme, setTheme } = useTheme();
@@ -41,7 +43,19 @@ function mockMatchMedia(matches: boolean) {
 
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    localStorage.clear();
+    storage.clear();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          storage.set(key, value);
+        },
+        removeItem: (key: string) => {
+          storage.delete(key);
+        },
+      },
+    });
     document.documentElement.className = "";
   });
 
@@ -78,7 +92,7 @@ describe("ThemeProvider", () => {
       expect(document.documentElement).toHaveClass("dark");
     });
 
-    screen.getByRole("button", { name: "force-dark" }).click();
+    fireEvent.click(screen.getByRole("button", { name: "force-dark" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("theme-value")).toHaveTextContent("system");
