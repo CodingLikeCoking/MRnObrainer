@@ -5,12 +5,15 @@ use crate::{AudioChunkInfo, UntranscribedChunk};
 use chrono::{DateTime, Utc};
 use image::DynamicImage;
 use libsqlite3_sys::sqlite3_auto_extension;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use sqlite_vec::sqlite3_vec_init;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::pool::PoolConnection;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use sqlx::Column;
 use sqlx::Error as SqlxError;
+use sqlx::FromRow;
 use sqlx::Row;
 use sqlx::Sqlite;
 use sqlx::TypeInfo;
@@ -27,12 +30,16 @@ use zerocopy::AsBytes;
 use futures::future::try_join_all;
 
 use crate::{
-    text_similarity::is_similar_transcription, AudioChunksResponse, AudioDevice, AudioEntry,
-    AudioResult, AudioResultRaw, ContentType, CrossDevicePairingToken, DeviceType, Element,
-    ElementRow, ElementSource, FrameData, FrameRow, FrameRowLight, FrameWindowData,
-    InsertUiEvent, MeetingRecord, OCREntry, OCRResult, OCRResultRaw, OcrEngine, OcrTextBlock,
-    Order, SearchMatch, SearchMatchGroup, SearchResult, Speaker, TagContentType, TextBounds,
-    TextPosition, TimeSeriesChunk, UiContent, UiEventRecord, UiEventRow, VideoMetadata,
+    text_similarity::is_similar_transcription, ApprovalDecision, AudioChunksResponse, AudioDevice,
+    AudioEntry, AudioResult, AudioResultRaw, AutomationPolicy, AutomationRequest,
+    AutomationRequestStatus, ContentType, DeviceType, Element, ElementRow, ElementSource,
+    CrossDevicePairingToken, ExecutionPlan, ExecutionProfile, FrameData, FrameRow,
+    FrameRowLight, FrameWindowData, InsertUiEvent, IntentCandidate, IntentCandidateInput,
+    IntentEntity, IntentEvidence, MeetingRecord, NewAutomationRequest, NewWorkerOutboxEntry,
+    OCREntry, OCRResult, OCRResultRaw, OcrEngine, OcrTextBlock, Order, RunWindowPolicy,
+    SearchMatch, SearchMatchGroup, SearchResult, Speaker, TagContentType, TaskEntity,
+    TaskEpisode, TextBounds, TextPosition, TimeSeriesChunk, UiContent, UiEventRecord,
+    UiEventRow, VideoMetadata, WorkerOutboxEntry, WorkerOutboxStatus,
 };
 
 /// Time window (in seconds) to check for similar transcriptions across devices.
@@ -54,6 +61,236 @@ pub struct DeleteTimeRangeResult {
     pub video_files: Vec<String>,
     pub audio_files: Vec<String>,
     pub snapshot_files: Vec<String>,
+}
+
+#[derive(Debug, FromRow)]
+struct TaskEpisodeRow {
+    id: i64,
+    fingerprint: String,
+    started_at: DateTime<Utc>,
+    ended_at: DateTime<Utc>,
+    summary: String,
+    primary_intent: String,
+    app_name: Option<String>,
+    window_title: Option<String>,
+    browser_url: Option<String>,
+    domain: Option<String>,
+    confidence: f64,
+    sensitive: bool,
+    evidence_json: String,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+struct TaskEntityRow {
+    id: i64,
+    entity_type: String,
+    value: String,
+    normalized_value: String,
+    display_value: Option<String>,
+    sensitive: bool,
+    sensitivity_reason: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+struct IntentEntityRow {
+    id: i64,
+    entity_type: String,
+    value: String,
+    normalized_value: String,
+    display_value: Option<String>,
+    sensitive: bool,
+    sensitivity_reason: Option<String>,
+    entity_created_at: DateTime<Utc>,
+    entity_updated_at: DateTime<Utc>,
+    role: String,
+    source_type: String,
+    source_id: i64,
+}
+
+#[derive(Debug, FromRow)]
+struct AutomationPolicyRow {
+    id: i64,
+    scope: String,
+    execution_profile: String,
+    run_window_policy: String,
+    idle_threshold_seconds: i32,
+    night_window_start_hour: Option<i32>,
+    night_window_end_hour: Option<i32>,
+    feature_enabled: bool,
+    cloud_redaction_enabled: bool,
+    fully_autonomous_warning_acknowledged: bool,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+struct AutomationRequestRow {
+    id: i64,
+    episode_id: Option<i64>,
+    policy_scope: String,
+    status: String,
+    requires_approval: bool,
+    run_after: Option<DateTime<Utc>>,
+    plan_json: Option<String>,
+    approval_note: Option<String>,
+    approved_at: Option<DateTime<Utc>>,
+    completed_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+struct WorkerOutboxRow {
+    id: i64,
+    request_id: i64,
+    status: String,
+    run_at: DateTime<Utc>,
+    payload_json: String,
+    attempt_count: i32,
+    last_error: Option<String>,
+    dispatched_at: Option<DateTime<Utc>>,
+    acknowledged_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+fn decode_json<T: DeserializeOwned>(value: &str, field: &str) -> Result<T, sqlx::Error> {
+    serde_json::from_str(value)
+        .map_err(|error| sqlx::Error::Protocol(format!("failed to decode {field}: {error}")))
+}
+
+fn encode_json<T: Serialize>(value: &T, field: &str) -> Result<String, sqlx::Error> {
+    serde_json::to_string(value)
+        .map_err(|error| sqlx::Error::Protocol(format!("failed to encode {field}: {error}")))
+}
+
+fn invalid_data_error(message: impl Into<String>) -> sqlx::Error {
+    sqlx::Error::Protocol(message.into())
+}
+
+impl TryFrom<TaskEpisodeRow> for TaskEpisode {
+    type Error = sqlx::Error;
+
+    fn try_from(row: TaskEpisodeRow) -> Result<Self, Self::Error> {
+        Ok(TaskEpisode {
+            id: row.id,
+            fingerprint: row.fingerprint,
+            started_at: row.started_at,
+            ended_at: row.ended_at,
+            summary: row.summary,
+            primary_intent: row.primary_intent,
+            app_name: row.app_name,
+            window_title: row.window_title,
+            browser_url: row.browser_url,
+            domain: row.domain,
+            confidence: row.confidence,
+            sensitive: row.sensitive,
+            evidence: decode_json::<Vec<IntentEvidence>>(&row.evidence_json, "evidence_json")?,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+    }
+}
+
+impl TryFrom<TaskEntityRow> for TaskEntity {
+    type Error = sqlx::Error;
+
+    fn try_from(row: TaskEntityRow) -> Result<Self, Self::Error> {
+        Ok(TaskEntity {
+            id: row.id,
+            entity_type: row
+                .entity_type
+                .parse()
+                .map_err(|error: String| invalid_data_error(error))?,
+            value: row.value,
+            normalized_value: row.normalized_value,
+            display_value: row.display_value,
+            sensitive: row.sensitive,
+            sensitivity_reason: row.sensitivity_reason,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+    }
+}
+
+impl TryFrom<AutomationPolicyRow> for AutomationPolicy {
+    type Error = sqlx::Error;
+
+    fn try_from(row: AutomationPolicyRow) -> Result<Self, Self::Error> {
+        Ok(AutomationPolicy {
+            id: row.id,
+            scope: row.scope,
+            execution_profile: row
+                .execution_profile
+                .parse()
+                .map_err(|error: String| invalid_data_error(error))?,
+            run_window_policy: row
+                .run_window_policy
+                .parse()
+                .map_err(|error: String| invalid_data_error(error))?,
+            idle_threshold_seconds: row.idle_threshold_seconds,
+            night_window_start_hour: row.night_window_start_hour,
+            night_window_end_hour: row.night_window_end_hour,
+            feature_enabled: row.feature_enabled,
+            cloud_redaction_enabled: row.cloud_redaction_enabled,
+            fully_autonomous_warning_acknowledged: row.fully_autonomous_warning_acknowledged,
+            updated_at: row.updated_at,
+        })
+    }
+}
+
+impl TryFrom<AutomationRequestRow> for AutomationRequest {
+    type Error = sqlx::Error;
+
+    fn try_from(row: AutomationRequestRow) -> Result<Self, Self::Error> {
+        Ok(AutomationRequest {
+            id: row.id,
+            episode_id: row.episode_id,
+            policy_scope: row.policy_scope,
+            status: row
+                .status
+                .parse()
+                .map_err(|error: String| invalid_data_error(error))?,
+            requires_approval: row.requires_approval,
+            run_after: row.run_after,
+            execution_plan: row
+                .plan_json
+                .as_deref()
+                .map(|value| decode_json::<ExecutionPlan>(value, "plan_json"))
+                .transpose()?,
+            approval_note: row.approval_note,
+            approved_at: row.approved_at,
+            completed_at: row.completed_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+    }
+}
+
+impl TryFrom<WorkerOutboxRow> for WorkerOutboxEntry {
+    type Error = sqlx::Error;
+
+    fn try_from(row: WorkerOutboxRow) -> Result<Self, Self::Error> {
+        Ok(WorkerOutboxEntry {
+            id: row.id,
+            request_id: row.request_id,
+            status: row
+                .status
+                .parse()
+                .map_err(|error: String| invalid_data_error(error))?,
+            run_at: row.run_at,
+            payload: decode_json(&row.payload_json, "payload_json")?,
+            attempt_count: row.attempt_count,
+            last_error: row.last_error,
+            dispatched_at: row.dispatched_at,
+            acknowledged_at: row.acknowledged_at,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+    }
 }
 
 /// A transaction wrapper that uses `BEGIN IMMEDIATE` to acquire the write lock upfront,
@@ -5576,6 +5813,751 @@ LIMIT ? OFFSET ?
             .await?;
 
         Ok(rows.into_iter().map(UiEventRecord::from).collect())
+    }
+
+    // ============================================================================
+    // Intent Automation
+    // ============================================================================
+
+    pub async fn save_intent_candidate(
+        &self,
+        candidate: &IntentCandidateInput,
+    ) -> Result<IntentCandidate, sqlx::Error> {
+        let evidence_json = encode_json(&candidate.episode.evidence, "task episode evidence")?;
+        let mut tx = self.begin_immediate_with_retry().await?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO task_episodes (
+                fingerprint, started_at, ended_at, summary, primary_intent,
+                app_name, window_title, browser_url, domain,
+                confidence, sensitive, evidence_json, created_at, updated_at
+            ) VALUES (
+                ?1, ?2, ?3, ?4, ?5,
+                ?6, ?7, ?8, ?9,
+                ?10, ?11, ?12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT(fingerprint) DO UPDATE SET
+                started_at = excluded.started_at,
+                ended_at = excluded.ended_at,
+                summary = excluded.summary,
+                primary_intent = excluded.primary_intent,
+                app_name = excluded.app_name,
+                window_title = excluded.window_title,
+                browser_url = excluded.browser_url,
+                domain = excluded.domain,
+                confidence = excluded.confidence,
+                sensitive = excluded.sensitive,
+                evidence_json = excluded.evidence_json,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+        )
+        .bind(&candidate.episode.fingerprint)
+        .bind(candidate.episode.started_at)
+        .bind(candidate.episode.ended_at)
+        .bind(&candidate.episode.summary)
+        .bind(&candidate.episode.primary_intent)
+        .bind(&candidate.episode.app_name)
+        .bind(&candidate.episode.window_title)
+        .bind(&candidate.episode.browser_url)
+        .bind(&candidate.episode.domain)
+        .bind(candidate.episode.confidence)
+        .bind(candidate.episode.sensitive)
+        .bind(evidence_json)
+        .execute(&mut **tx.conn())
+        .await?;
+
+        let episode_id: i64 = sqlx::query_scalar(
+            r#"
+            SELECT id
+            FROM task_episodes
+            WHERE fingerprint = ?
+            "#,
+        )
+        .bind(&candidate.episode.fingerprint)
+        .fetch_one(&mut **tx.conn())
+        .await?;
+
+        sqlx::query("DELETE FROM episode_entity_links WHERE episode_id = ?")
+            .bind(episode_id)
+            .execute(&mut **tx.conn())
+            .await?;
+
+        for entity in &candidate.entities {
+            sqlx::query(
+                r#"
+                INSERT INTO task_entities (
+                    entity_type, value, normalized_value, display_value,
+                    sensitive, sensitivity_reason, created_at, updated_at
+                ) VALUES (
+                    ?1, ?2, ?3, ?4,
+                    ?5, ?6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT(entity_type, normalized_value) DO UPDATE SET
+                    value = excluded.value,
+                    display_value = excluded.display_value,
+                    sensitive = excluded.sensitive,
+                    sensitivity_reason = excluded.sensitivity_reason,
+                    updated_at = CURRENT_TIMESTAMP
+                "#,
+            )
+            .bind(entity.entity.entity_type.to_string())
+            .bind(&entity.entity.value)
+            .bind(&entity.entity.normalized_value)
+            .bind(&entity.entity.display_value)
+            .bind(entity.entity.sensitive)
+            .bind(&entity.entity.sensitivity_reason)
+            .execute(&mut **tx.conn())
+            .await?;
+
+            let entity_id: i64 = sqlx::query_scalar(
+                r#"
+                SELECT id
+                FROM task_entities
+                WHERE entity_type = ? AND normalized_value = ?
+                "#,
+            )
+            .bind(entity.entity.entity_type.to_string())
+            .bind(&entity.entity.normalized_value)
+            .fetch_one(&mut **tx.conn())
+            .await?;
+
+            sqlx::query(
+                r#"
+                INSERT OR REPLACE INTO episode_entity_links (
+                    episode_id, entity_id, role, source_type, source_id, created_at
+                ) VALUES (
+                    ?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP
+                )
+                "#,
+            )
+            .bind(episode_id)
+            .bind(entity_id)
+            .bind(&entity.role)
+            .bind(entity.source_type.to_string())
+            .bind(entity.source_id)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+
+        tx.commit().await?;
+        self.get_intent_candidate_by_fingerprint(&candidate.episode.fingerprint)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
+    }
+
+    pub async fn list_task_episodes(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<TaskEpisode>, sqlx::Error> {
+        let rows: Vec<TaskEpisodeRow> = sqlx::query_as(
+            r#"
+            SELECT
+                id, fingerprint, started_at, ended_at, summary, primary_intent,
+                app_name, window_title, browser_url, domain, confidence, sensitive,
+                evidence_json, created_at, updated_at
+            FROM task_episodes
+            ORDER BY started_at DESC
+            LIMIT ? OFFSET ?
+            "#,
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter().map(TaskEpisode::try_from).collect()
+    }
+
+    pub async fn get_task_episode_by_id(
+        &self,
+        episode_id: i64,
+    ) -> Result<Option<TaskEpisode>, sqlx::Error> {
+        let row: Option<TaskEpisodeRow> = sqlx::query_as(
+            r#"
+            SELECT
+                id, fingerprint, started_at, ended_at, summary, primary_intent,
+                app_name, window_title, browser_url, domain, confidence, sensitive,
+                evidence_json, created_at, updated_at
+            FROM task_episodes
+            WHERE id = ?
+            "#,
+        )
+        .bind(episode_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(TaskEpisode::try_from).transpose()
+    }
+
+    pub async fn list_intent_candidates(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<IntentCandidate>, sqlx::Error> {
+        let episodes = self.list_task_episodes(limit, offset).await?;
+        let mut candidates = Vec::with_capacity(episodes.len());
+
+        for episode in episodes {
+            let entities = self.load_intent_entities(episode.id).await?;
+            candidates.push(IntentCandidate { episode, entities });
+        }
+
+        Ok(candidates)
+    }
+
+    pub async fn get_intent_candidate_by_episode_id(
+        &self,
+        episode_id: i64,
+    ) -> Result<Option<IntentCandidate>, sqlx::Error> {
+        let episode = self.get_task_episode_by_id(episode_id).await?;
+        match episode {
+            Some(episode) => {
+                let entities = self.load_intent_entities(episode.id).await?;
+                Ok(Some(IntentCandidate { episode, entities }))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub async fn get_intent_candidate_by_fingerprint(
+        &self,
+        fingerprint: &str,
+    ) -> Result<Option<IntentCandidate>, sqlx::Error> {
+        let episode_id: Option<i64> =
+            sqlx::query_scalar("SELECT id FROM task_episodes WHERE fingerprint = ?")
+                .bind(fingerprint)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        match episode_id {
+            Some(episode_id) => self.get_intent_candidate_by_episode_id(episode_id).await,
+            None => Ok(None),
+        }
+    }
+
+    async fn load_intent_entities(
+        &self,
+        episode_id: i64,
+    ) -> Result<Vec<IntentEntity>, sqlx::Error> {
+        let rows: Vec<IntentEntityRow> = sqlx::query_as(
+            r#"
+            SELECT
+                e.id,
+                e.entity_type,
+                e.value,
+                e.normalized_value,
+                e.display_value,
+                e.sensitive,
+                e.sensitivity_reason,
+                e.created_at AS entity_created_at,
+                e.updated_at AS entity_updated_at,
+                l.role,
+                l.source_type,
+                l.source_id
+            FROM episode_entity_links l
+            JOIN task_entities e ON e.id = l.entity_id
+            WHERE l.episode_id = ?
+            ORDER BY l.created_at ASC, e.id ASC
+            "#,
+        )
+        .bind(episode_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut entities = Vec::with_capacity(rows.len());
+        for row in rows {
+            let entity = TaskEntity {
+                id: row.id,
+                entity_type: row
+                    .entity_type
+                    .parse()
+                    .map_err(|error: String| invalid_data_error(error))?,
+                value: row.value,
+                normalized_value: row.normalized_value,
+                display_value: row.display_value,
+                sensitive: row.sensitive,
+                sensitivity_reason: row.sensitivity_reason,
+                created_at: row.entity_created_at,
+                updated_at: row.entity_updated_at,
+            };
+
+            entities.push(IntentEntity {
+                role: row.role,
+                source_type: row
+                    .source_type
+                    .parse()
+                    .map_err(|error: String| invalid_data_error(error))?,
+                source_id: row.source_id,
+                entity,
+            });
+        }
+
+        Ok(entities)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn upsert_automation_policy(
+        &self,
+        scope: &str,
+        execution_profile: ExecutionProfile,
+        run_window_policy: RunWindowPolicy,
+        idle_threshold_seconds: i32,
+        night_window_start_hour: Option<i32>,
+        night_window_end_hour: Option<i32>,
+        feature_enabled: bool,
+        cloud_redaction_enabled: bool,
+        fully_autonomous_warning_acknowledged: bool,
+    ) -> Result<AutomationPolicy, sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            r#"
+            INSERT INTO automation_policies (
+                scope, execution_profile, run_window_policy,
+                idle_threshold_seconds, night_window_start_hour, night_window_end_hour,
+                feature_enabled, cloud_redaction_enabled,
+                fully_autonomous_warning_acknowledged, updated_at
+            ) VALUES (
+                ?1, ?2, ?3,
+                ?4, ?5, ?6,
+                ?7, ?8,
+                ?9, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT(scope) DO UPDATE SET
+                execution_profile = excluded.execution_profile,
+                run_window_policy = excluded.run_window_policy,
+                idle_threshold_seconds = excluded.idle_threshold_seconds,
+                night_window_start_hour = excluded.night_window_start_hour,
+                night_window_end_hour = excluded.night_window_end_hour,
+                feature_enabled = excluded.feature_enabled,
+                cloud_redaction_enabled = excluded.cloud_redaction_enabled,
+                fully_autonomous_warning_acknowledged = excluded.fully_autonomous_warning_acknowledged,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+        )
+        .bind(scope)
+        .bind(execution_profile.to_string())
+        .bind(run_window_policy.to_string())
+        .bind(idle_threshold_seconds)
+        .bind(night_window_start_hour)
+        .bind(night_window_end_hour)
+        .bind(feature_enabled)
+        .bind(cloud_redaction_enabled)
+        .bind(fully_autonomous_warning_acknowledged)
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+
+        self.get_automation_policy(scope)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
+    }
+
+    pub async fn get_automation_policy(
+        &self,
+        scope: &str,
+    ) -> Result<Option<AutomationPolicy>, sqlx::Error> {
+        let row: Option<AutomationPolicyRow> = sqlx::query_as(
+            r#"
+            SELECT
+                id, scope, execution_profile, run_window_policy,
+                idle_threshold_seconds, night_window_start_hour, night_window_end_hour,
+                feature_enabled, cloud_redaction_enabled,
+                fully_autonomous_warning_acknowledged, updated_at
+            FROM automation_policies
+            WHERE scope = ?
+            "#,
+        )
+        .bind(scope)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(AutomationPolicy::try_from).transpose()
+    }
+
+    pub async fn create_automation_request(
+        &self,
+        request: &NewAutomationRequest,
+    ) -> Result<AutomationRequest, sqlx::Error> {
+        let plan_json = request
+            .execution_plan
+            .as_ref()
+            .map(|plan| encode_json(plan, "execution plan"))
+            .transpose()?;
+
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let result = sqlx::query(
+            r#"
+            INSERT INTO automation_requests (
+                episode_id, policy_scope, status, requires_approval,
+                run_after, plan_json, approval_note,
+                created_at, updated_at
+            ) VALUES (
+                ?1, ?2, ?3, ?4,
+                ?5, ?6, ?7,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            "#,
+        )
+        .bind(request.episode_id)
+        .bind(&request.policy_scope)
+        .bind(request.status.to_string())
+        .bind(request.requires_approval)
+        .bind(request.run_after)
+        .bind(plan_json)
+        .bind(&request.approval_note)
+        .execute(&mut **tx.conn())
+        .await?;
+
+        let request_id = result.last_insert_rowid();
+        tx.commit().await?;
+        self.get_automation_request_by_id(request_id).await
+    }
+
+    pub async fn update_automation_request_approval(
+        &self,
+        request_id: i64,
+        decision: ApprovalDecision,
+        note: Option<&str>,
+    ) -> Result<AutomationRequest, sqlx::Error> {
+        let now = Utc::now();
+        let status = match decision {
+            ApprovalDecision::Approved => AutomationRequestStatus::Queued,
+            ApprovalDecision::Rejected => AutomationRequestStatus::Rejected,
+            ApprovalDecision::RevisionRequested => AutomationRequestStatus::AwaitingApproval,
+        };
+        let approved_at = match decision {
+            ApprovalDecision::Approved => Some(now),
+            _ => None,
+        };
+
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            r#"
+            UPDATE automation_requests
+            SET status = ?1,
+                approval_note = COALESCE(?2, approval_note),
+                approved_at = ?3,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?4
+            "#,
+        )
+        .bind(status.to_string())
+        .bind(note)
+        .bind(approved_at)
+        .bind(request_id)
+        .execute(&mut **tx.conn())
+        .await?;
+
+        tx.commit().await?;
+        self.get_automation_request_by_id(request_id).await
+    }
+
+    pub async fn list_automation_requests(
+        &self,
+        status: Option<AutomationRequestStatus>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<AutomationRequest>, sqlx::Error> {
+        let rows: Vec<AutomationRequestRow> = if let Some(status) = status {
+            sqlx::query_as(
+                r#"
+                SELECT
+                    id, episode_id, policy_scope, status, requires_approval,
+                    run_after, plan_json, approval_note,
+                    approved_at, completed_at, created_at, updated_at
+                FROM automation_requests
+                WHERE status = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+            )
+            .bind(status.to_string())
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as(
+                r#"
+                SELECT
+                    id, episode_id, policy_scope, status, requires_approval,
+                    run_after, plan_json, approval_note,
+                    approved_at, completed_at, created_at, updated_at
+                FROM automation_requests
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+            )
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        };
+
+        rows.into_iter().map(AutomationRequest::try_from).collect()
+    }
+
+    pub async fn get_automation_request_by_id(
+        &self,
+        request_id: i64,
+    ) -> Result<AutomationRequest, sqlx::Error> {
+        let row: AutomationRequestRow = sqlx::query_as(
+            r#"
+            SELECT
+                id, episode_id, policy_scope, status, requires_approval,
+                run_after, plan_json, approval_note,
+                approved_at, completed_at, created_at, updated_at
+            FROM automation_requests
+            WHERE id = ?
+            "#,
+        )
+        .bind(request_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        row.try_into()
+    }
+
+    pub async fn enqueue_worker_outbox(
+        &self,
+        entry: &NewWorkerOutboxEntry,
+    ) -> Result<WorkerOutboxEntry, sqlx::Error> {
+        let payload_json = encode_json(&entry.payload, "worker outbox payload")?;
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            r#"
+            INSERT INTO worker_outbox (
+                request_id, status, run_at, payload_json, attempt_count,
+                created_at, updated_at
+            ) VALUES (
+                ?1, ?2, ?3, ?4, 0,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT(request_id) DO UPDATE SET
+                status = excluded.status,
+                run_at = excluded.run_at,
+                payload_json = excluded.payload_json,
+                attempt_count = 0,
+                last_error = NULL,
+                dispatched_at = NULL,
+                acknowledged_at = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+        )
+        .bind(entry.request_id)
+        .bind(WorkerOutboxStatus::Pending.to_string())
+        .bind(entry.run_at)
+        .bind(payload_json)
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+
+        self.get_worker_outbox_by_request_id(entry.request_id).await
+    }
+
+    pub async fn dispatch_worker_outbox(
+        &self,
+        now: DateTime<Utc>,
+        limit: u32,
+    ) -> Result<Vec<WorkerOutboxEntry>, sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let rows: Vec<WorkerOutboxRow> = sqlx::query_as(
+            r#"
+            SELECT
+                id, request_id, status, run_at, payload_json,
+                attempt_count, last_error, dispatched_at, acknowledged_at,
+                created_at, updated_at
+            FROM worker_outbox
+            WHERE status = ?1 AND run_at <= ?2
+            ORDER BY run_at ASC, id ASC
+            LIMIT ?3
+            "#,
+        )
+        .bind(WorkerOutboxStatus::Pending.to_string())
+        .bind(now)
+        .bind(limit)
+        .fetch_all(&mut **tx.conn())
+        .await?;
+
+        let mut dispatched = Vec::new();
+        for row in rows {
+            let affected = sqlx::query(
+                r#"
+                UPDATE worker_outbox
+                SET status = ?1,
+                    dispatched_at = ?2,
+                    attempt_count = attempt_count + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?3 AND status = ?4
+                "#,
+            )
+            .bind(WorkerOutboxStatus::Dispatched.to_string())
+            .bind(now)
+            .bind(row.id)
+            .bind(WorkerOutboxStatus::Pending.to_string())
+            .execute(&mut **tx.conn())
+            .await?
+            .rows_affected();
+
+            if affected == 0 {
+                continue;
+            }
+
+            let updated_row: WorkerOutboxRow = sqlx::query_as(
+                r#"
+                SELECT
+                    id, request_id, status, run_at, payload_json,
+                    attempt_count, last_error, dispatched_at, acknowledged_at,
+                    created_at, updated_at
+                FROM worker_outbox
+                WHERE id = ?
+                "#,
+            )
+            .bind(row.id)
+            .fetch_one(&mut **tx.conn())
+            .await?;
+            dispatched.push(updated_row.try_into()?);
+        }
+
+        tx.commit().await?;
+        Ok(dispatched)
+    }
+
+    pub async fn ack_worker_outbox(
+        &self,
+        outbox_id: i64,
+        success: bool,
+        last_error: Option<&str>,
+    ) -> Result<WorkerOutboxEntry, sqlx::Error> {
+        let now = Utc::now();
+        let outbox_status = if success {
+            WorkerOutboxStatus::Acknowledged
+        } else {
+            WorkerOutboxStatus::Failed
+        };
+        let request_status = if success {
+            AutomationRequestStatus::Completed
+        } else {
+            AutomationRequestStatus::Failed
+        };
+
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            r#"
+            UPDATE worker_outbox
+            SET status = ?1,
+                last_error = ?2,
+                acknowledged_at = ?3,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?4
+            "#,
+        )
+        .bind(outbox_status.to_string())
+        .bind(last_error)
+        .bind(if success { Some(now) } else { None })
+        .bind(outbox_id)
+        .execute(&mut **tx.conn())
+        .await?;
+
+        let updated_row: WorkerOutboxRow = sqlx::query_as(
+            r#"
+            SELECT
+                id, request_id, status, run_at, payload_json,
+                attempt_count, last_error, dispatched_at, acknowledged_at,
+                created_at, updated_at
+            FROM worker_outbox
+            WHERE id = ?
+            "#,
+        )
+        .bind(outbox_id)
+        .fetch_one(&mut **tx.conn())
+        .await?;
+
+        sqlx::query(
+            r#"
+            UPDATE automation_requests
+            SET status = ?1,
+                completed_at = ?2,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?3
+            "#,
+        )
+        .bind(request_status.to_string())
+        .bind(if success { Some(now) } else { None })
+        .bind(updated_row.request_id)
+        .execute(&mut **tx.conn())
+        .await?;
+
+        tx.commit().await?;
+        updated_row.try_into()
+    }
+
+    pub async fn list_worker_outbox(
+        &self,
+        status: Option<WorkerOutboxStatus>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<WorkerOutboxEntry>, sqlx::Error> {
+        let rows: Vec<WorkerOutboxRow> = if let Some(status) = status {
+            sqlx::query_as(
+                r#"
+                SELECT
+                    id, request_id, status, run_at, payload_json,
+                    attempt_count, last_error, dispatched_at, acknowledged_at,
+                    created_at, updated_at
+                FROM worker_outbox
+                WHERE status = ?
+                ORDER BY run_at ASC, id ASC
+                LIMIT ? OFFSET ?
+                "#,
+            )
+            .bind(status.to_string())
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as(
+                r#"
+                SELECT
+                    id, request_id, status, run_at, payload_json,
+                    attempt_count, last_error, dispatched_at, acknowledged_at,
+                    created_at, updated_at
+                FROM worker_outbox
+                ORDER BY run_at ASC, id ASC
+                LIMIT ? OFFSET ?
+                "#,
+            )
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?
+        };
+
+        rows.into_iter().map(WorkerOutboxEntry::try_from).collect()
+    }
+
+    pub async fn get_worker_outbox_by_request_id(
+        &self,
+        request_id: i64,
+    ) -> Result<WorkerOutboxEntry, sqlx::Error> {
+        let row: WorkerOutboxRow = sqlx::query_as(
+            r#"
+            SELECT
+                id, request_id, status, run_at, payload_json,
+                attempt_count, last_error, dispatched_at, acknowledged_at,
+                created_at, updated_at
+            FROM worker_outbox
+            WHERE request_id = ?
+            "#,
+        )
+        .bind(request_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        row.try_into()
     }
 
     /// Spawn a background task that runs `PRAGMA wal_checkpoint(TRUNCATE)` every 5 minutes.

@@ -479,7 +479,13 @@ impl UpdatesManager {
                 });
 
                 if rx.await? {
-                    self.handle_update_now().await?;
+                    if let Err(err) =
+                        stop_screenpipe(self.app.state::<RecordingState>(), self.app.clone()).await
+                    {
+                        error!("Failed to stop recording before restart: {}", err);
+                    }
+                    QUIT_REQUESTED.store(true, Ordering::SeqCst);
+                    self.app.restart();
                 }
             }
 

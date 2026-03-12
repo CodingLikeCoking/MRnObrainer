@@ -150,11 +150,9 @@ export default function GeneralSettings() {
     await handleOpenRelease(betaRelease);
   };
 
-  const openOnboardingMode = async (mode: "setup" | "learn" | "pair_worker") => {
+  const openOnboardingMode = async (mode: "setup" | "learn") => {
     await commands.setOnboardingMode(mode);
-    await commands.setOnboardingStep(
-      mode === "pair_worker" ? "pair-worker" : "privacy"
-    );
+    await commands.setOnboardingStep("privacy");
     await commands.showOnboardingWindow();
   };
 
@@ -236,7 +234,7 @@ export default function GeneralSettings() {
                   <div>
                     <h3 className="text-sm font-medium text-foreground">Guided setup</h3>
                     <p className="text-xs text-muted-foreground">
-                      Replay the local-first setup or jump into the optional worker flow.
+                      Replay the local-first setup or review the quick tour. Remote workers now live in settings.
                     </p>
                   </div>
                 </div>
@@ -256,14 +254,6 @@ export default function GeneralSettings() {
                     onClick={() => openOnboardingMode("learn")}
                   >
                     Learn MRnObrainer
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => openOnboardingMode("pair_worker")}
-                  >
-                    Pair worker
                   </Button>
                 </div>
               </div>

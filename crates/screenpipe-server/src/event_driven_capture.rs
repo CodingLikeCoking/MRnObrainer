@@ -308,7 +308,8 @@ pub async fn event_driven_capture_loop(
 
         // Skip capture while the screen is locked / screensaver active
         if crate::sleep_monitor::screen_is_locked() {
-            tokio::time::sleep(poll_interval).await;
+            // While locked, back off to idle polling cadence to reduce wakeups.
+            tokio::time::sleep(idle_poll_interval).await;
             continue;
         }
 

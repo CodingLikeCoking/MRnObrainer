@@ -38,6 +38,14 @@ use crate::{
             api_list_monitors, api_vision_status, audio_metrics_handler, health_check,
             vision_metrics_handler,
         },
+        intent::{
+            ack_worker_outbox_handler, apply_approval_decision_handler,
+            create_automation_request_handler, flush_worker_outbox_handler,
+            get_automation_policy_handler, get_task_episode_handler,
+            list_automation_requests_handler, list_intent_candidates_handler,
+            list_task_episodes_handler, list_worker_outbox_handler, rebuild_intent_episodes,
+            upsert_automation_policy_handler,
+        },
         meetings::{get_meeting_handler, list_meetings_handler},
         search::{keyword_search_handler, search},
         speakers::{
@@ -567,6 +575,36 @@ impl SCServer {
             .route(
                 "/data/delete-range",
                 axum::routing::post(delete_time_range_handler),
+            )
+            // Intent automation API
+            .route(
+                "/intent/rebuild",
+                axum::routing::post(rebuild_intent_episodes),
+            )
+            .route("/intent/episodes", get(list_task_episodes_handler))
+            .route("/intent/episodes/:id", get(get_task_episode_handler))
+            .route("/intent/candidates", get(list_intent_candidates_handler))
+            .route("/automation/policy", get(get_automation_policy_handler))
+            .route(
+                "/automation/policy",
+                axum::routing::put(upsert_automation_policy_handler),
+            )
+            .route(
+                "/automation/requests",
+                get(list_automation_requests_handler).post(create_automation_request_handler),
+            )
+            .route(
+                "/automation/approvals/:id",
+                axum::routing::post(apply_approval_decision_handler),
+            )
+            .route("/worker/outbox", get(list_worker_outbox_handler))
+            .route(
+                "/worker/outbox/flush",
+                axum::routing::post(flush_worker_outbox_handler),
+            )
+            .route(
+                "/worker/outbox/:id/ack",
+                axum::routing::post(ack_worker_outbox_handler),
             )
             .route(
                 "/audio/retranscribe",

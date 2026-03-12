@@ -38,6 +38,7 @@ import {
   Settings,
   LogIn,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AIPreset, commands } from "@/lib/utils/tauri";
+import { getSetupCapability } from "@/lib/setup-status";
 
 // Helper to detect UUID-like strings and format preset names nicely
 const formatPresetName = (name: string): string => {
@@ -113,6 +115,23 @@ interface OpenAIModel {
   created?: number;
   owned_by?: string;
 }
+
+type GuidedProviderChoice = "local" | "chatgpt" | "advanced";
+
+const DEFAULT_LOCAL_AI_URL = "http://localhost:11434/v1";
+const DEFAULT_CHATGPT_URL = "https://api.openai.com/v1";
+const DEFAULT_LOCAL_AI_MODEL = "ministral-3:latest";
+
+const getGuidedChoiceFromProvider = (
+  provider: AIPreset["provider"]
+): GuidedProviderChoice => {
+  const capability = getSetupCapability(provider);
+  if (capability.audience === "advanced") {
+    return "advanced";
+  }
+
+  return provider === "openai-chatgpt" ? "chatgpt" : "local";
+};
 
 export const DEFAULT_PROMPT = `Rules:
 - You can analyze/view/show/access videos to the user by putting .mp4 files in a code block (we'll render it) like this: \`/users/video.mp4\`, use the exact, absolute, file path from file_path property
@@ -172,9 +191,11 @@ export function AIProviderConfig({
   defaultPreset,
   showLoginCta = true,
 }: AIProviderConfigProps) {
+  const initialProvider = defaultPreset?.provider || "native-ollama";
+  const initialGuidedChoice = getGuidedChoiceFromProvider(initialProvider);
   const [selectedProvider, setSelectedProvider] = useState<
     AIPreset["provider"]
-  >(defaultPreset?.provider || "openai");
+  >(initialProvider);
   const { settings } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [openaiModels, setOpenAIModels] = useState<OpenAIModel[]>([]);
@@ -182,6 +203,12 @@ export function AIProviderConfig({
   const [idError, setIdError] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [piAvailable, setPiAvailable] = useState(false);
+  const [guidedChoice, setGuidedChoice] = useState<GuidedProviderChoice>(
+    initialGuidedChoice
+  );
+  const [showAdvancedProviders, setShowAdvancedProviders] = useState(
+    getSetupCapability(initialProvider).audience === "advanced"
+  );
 
   // Check Pi availability (installed at app startup by Rust background thread)
   useEffect(() => {
@@ -201,10 +228,24 @@ export function AIProviderConfig({
     return () => clearInterval(interval);
   }, []);
   const [formData, setFormData] = useState<AIPreset>({
-    provider: defaultPreset?.provider || "openai",
+    provider: initialProvider,
     apiKey: defaultPreset?.apiKey || "",
-    url: defaultPreset?.url || "",
-    model: defaultPreset?.model || "",
+    url:
+      defaultPreset?.url ||
+      (initialProvider === "native-ollama"
+        ? DEFAULT_LOCAL_AI_URL
+        : initialProvider === "openai-chatgpt"
+          ? DEFAULT_CHATGPT_URL
+          : ""),
+    model:
+      defaultPreset?.model ||
+      (initialProvider === "openai-chatgpt"
+        ? "gpt-4o"
+        : initialProvider === "native-ollama"
+          ? DEFAULT_LOCAL_AI_MODEL
+        : initialProvider === "pi"
+          ? "claude-haiku-4-5"
+          : ""),
     maxContextChars: defaultPreset?.maxContextChars || 512000,
     prompt: defaultPreset?.prompt || DEFAULT_PROMPT,
     id: defaultPreset?.id || "",
@@ -243,6 +284,64 @@ export function AIProviderConfig({
     setFormData((prev) => ({ ...prev, id: value }));
     validateId(value);
   };
+
+  const chooseProvider = useCallback((provider: AIPreset["provider"]) => {
+    setSelectedProvider(provider);
+    setFormData((prev) => {
+      const next: AIPreset = {
+        ...prev,
+        provider,
+      };
+
+      if (provider === "native-ollama") {
+        next.url = prev.provider === provider && prev.url
+          ? prev.url
+          : DEFAULT_LOCAL_AI_URL;
+        next.model = prev.provider === provider && prev.model
+          ? prev.model
+          : DEFAULT_LOCAL_AI_MODEL;
+      }
+
+      if (provider === "custom") {
+        next.url = prev.provider === provider && prev.url
+          ? prev.url
+          : DEFAULT_LOCAL_AI_URL;
+      }
+
+      if (provider === "openai-chatgpt") {
+        next.url = DEFAULT_CHATGPT_URL;
+        next.apiKey = "";
+        next.model = prev.provider === provider && prev.model
+          ? prev.model
+          : "gpt-4o";
+      }
+
+      if (provider === "pi") {
+        next.url = "";
+        next.apiKey = "";
+        next.model = prev.provider === provider && prev.model
+          ? prev.model
+          : "claude-haiku-4-5";
+      }
+
+      return next;
+    });
+  }, []);
+
+  const handleGuidedChoice = useCallback((choice: GuidedProviderChoice) => {
+    setGuidedChoice(choice);
+
+    if (choice === "advanced") {
+      setShowAdvancedProviders(true);
+      if (getSetupCapability(selectedProvider).audience !== "advanced") {
+        chooseProvider("openai");
+      }
+      return;
+    }
+
+    setShowAdvancedProviders(false);
+    chooseProvider(choice === "chatgpt" ? "openai-chatgpt" : "native-ollama");
+  }, [chooseProvider, selectedProvider]);
 
   const fetchOpenAIModels = async (baseUrl: string, apiKey: string) => {
     setIsLoadingModels(true);
@@ -359,6 +458,8 @@ export function AIProviderConfig({
 
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const showManualProviderFields =
+    guidedChoice === "advanced" || showAdvanced;
 
   return (
     <div className="w-full space-y-2 rounded-lg bg-card p-2.5">
@@ -398,100 +499,146 @@ export function AIProviderConfig({
           />
         </div>
 
-        <div className={cn(
-          "grid gap-1",
-          piAvailable ? "grid-cols-5" : "grid-cols-4"
-        )}>
-          <Button
-            type="button"
-            variant={selectedProvider === "openai" ? "default" : "outline"}
-            className="flex h-7 items-center justify-center gap-1 text-[10px] px-2"
-            onClick={() => {
-              setSelectedProvider("openai");
-              setFormData({ ...formData, provider: "openai" });
-            }}
-          >
-            <Icons.openai className="h-3 w-3" />
-            <span>openai</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant={
-              selectedProvider === "native-ollama" ? "default" : "outline"
-            }
-            className="flex h-7 items-center justify-center gap-1 text-[10px] px-2"
-            onClick={() => {
-              setSelectedProvider("native-ollama");
-              setFormData({
-                ...formData,
-                provider: "native-ollama",
-                url: "http://localhost:11434/v1",
-              });
-            }}
-          >
-            <Icons.terminal className="h-3 w-3" />
-            <span>ollama</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant={selectedProvider === "custom" ? "default" : "outline"}
-            className="flex h-7 items-center justify-center gap-1 text-[10px] px-2"
-            onClick={() => {
-              setSelectedProvider("custom");
-              setFormData({
-                ...formData,
-                provider: "custom",
-                url: "http://localhost:11434/v1",
-              });
-            }}
-          >
-            <Icons.settings className="h-3 w-3" />
-            <span>custom</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant={selectedProvider === "openai-chatgpt" ? "default" : "outline"}
-            className="flex h-7 items-center justify-center gap-1 text-[10px] px-2"
-            onClick={() => {
-              setSelectedProvider("openai-chatgpt");
-              setFormData({
-                ...formData,
-                provider: "openai-chatgpt",
-                url: "https://api.openai.com/v1",
-                model: "gpt-4o",
-              });
-            }}
-          >
-            <Icons.openai className="h-3 w-3" />
-            <span>chatgpt</span>
-          </Button>
-
-          {piAvailable && (
+        <div className="space-y-1.5">
+          <div className="grid gap-1.5 md:grid-cols-3">
             <Button
               type="button"
-              disabled={!settings?.user?.token}
-              variant={selectedProvider === "pi" ? "default" : "outline"}
-              className="flex h-7 items-center justify-center gap-1 text-[10px] px-2"
-              onClick={() => {
-                setSelectedProvider("pi");
-                setFormData({
-                  ...formData,
-                  provider: "pi",
-                  url: "", // Pi uses RPC mode
-                  model: "claude-haiku-4-5",
-                });
-              }}
+              variant={guidedChoice === "local" ? "default" : "outline"}
+              className="h-auto flex-col items-start justify-start gap-1 px-3 py-2 text-left"
+              onClick={() => handleGuidedChoice("local")}
             >
-              <Icons.terminal className="h-3 w-3" />
-              <span>pi</span>
+              <span className="flex items-center gap-1 text-xs font-medium">
+                <Sparkles className="h-3.5 w-3.5" />
+                Use built-in/local AI
+              </span>
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Start on this device without an API key.
+              </span>
             </Button>
+
+            <Button
+              type="button"
+              variant={guidedChoice === "chatgpt" ? "default" : "outline"}
+              className="h-auto flex-col items-start justify-start gap-1 px-3 py-2 text-left"
+              onClick={() => handleGuidedChoice("chatgpt")}
+            >
+              <span className="flex items-center gap-1 text-xs font-medium">
+                <LogIn className="h-3.5 w-3.5" />
+                Connect ChatGPT
+              </span>
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Sign in instead of copying keys or endpoint URLs.
+              </span>
+            </Button>
+
+            <Button
+              type="button"
+              variant={guidedChoice === "advanced" ? "default" : "outline"}
+              className="h-auto flex-col items-start justify-start gap-1 px-3 py-2 text-left"
+              onClick={() => handleGuidedChoice("advanced")}
+            >
+              <span className="flex items-center gap-1 text-xs font-medium">
+                <Icons.settings className="h-3.5 w-3.5" />
+                Advanced provider
+              </span>
+              <span className="text-[10px] font-normal text-muted-foreground">
+                Use API keys, custom endpoints, or manual provider setup.
+              </span>
+            </Button>
+          </div>
+
+          {showAdvancedProviders && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground">
+                Manual setup options
+              </p>
+              <div
+                className={cn(
+                  "grid gap-1",
+                  piAvailable ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"
+                )}
+              >
+                <Button
+                  type="button"
+                  variant={selectedProvider === "openai" ? "default" : "outline"}
+                  className="flex h-7 items-center justify-center gap-1 px-2 text-[10px]"
+                  onClick={() => chooseProvider("openai")}
+                >
+                  <Icons.openai className="h-3 w-3" />
+                  <span>OpenAI API key</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant={selectedProvider === "custom" ? "default" : "outline"}
+                  className="flex h-7 items-center justify-center gap-1 px-2 text-[10px]"
+                  onClick={() => chooseProvider("custom")}
+                >
+                  <Icons.settings className="h-3 w-3" />
+                  <span>Custom endpoint</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant={
+                    selectedProvider === "native-ollama" ? "default" : "outline"
+                  }
+                  className="flex h-7 items-center justify-center gap-1 px-2 text-[10px]"
+                  onClick={() => chooseProvider("native-ollama")}
+                >
+                  <Icons.terminal className="h-3 w-3" />
+                  <span>Manual local model</span>
+                </Button>
+
+                {piAvailable && (
+                  <Button
+                    type="button"
+                    disabled={!settings?.user?.token}
+                    variant={selectedProvider === "pi" ? "default" : "outline"}
+                    className="flex h-7 items-center justify-center gap-1 px-2 text-[10px]"
+                    onClick={() => chooseProvider("pi")}
+                  >
+                    <Icons.terminal className="h-3 w-3" />
+                    <span>Pi account</span>
+                  </Button>
+                )}
+              </div>
+            </div>
           )}
         </div>
 
-        {selectedProvider === "openai" && (
+        {!showManualProviderFields && guidedChoice === "local" && (
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <p className="text-xs font-medium text-foreground">
+              Local AI stays on this device.
+            </p>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+              MRnObrainer will use your local model without asking for an API key.
+              Advanced lets you change the local model or server address later.
+            </p>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              {openaiModels.length > 0
+                ? `Detected ${openaiModels.length} local model${openaiModels.length === 1 ? "" : "s"}.`
+                : `Default local model: ${formData.model || DEFAULT_LOCAL_AI_MODEL}.`}
+            </p>
+          </div>
+        )}
+
+        {!showManualProviderFields && guidedChoice === "chatgpt" && (
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div>
+              <p className="text-xs font-medium text-foreground">
+                Connect your ChatGPT account.
+              </p>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                Sign in once and keep the model details tucked away unless you want to adjust them.
+              </p>
+            </div>
+            <ChatGptSignInButton />
+          </div>
+        )}
+
+        {showManualProviderFields && selectedProvider === "openai" && (
           <div className="space-y-1">
             <div className="space-y-0.5">
               <Label htmlFor="apiKey" className="text-xs">api key</Label>
@@ -554,7 +701,7 @@ export function AIProviderConfig({
           </div>
         )}
 
-        {selectedProvider === "native-ollama" && (
+        {showManualProviderFields && selectedProvider === "native-ollama" && (
           <div className="space-y-1">
             <div className="space-y-0.5">
               <Label htmlFor="baseUrl" className="text-xs">base url</Label>
@@ -600,7 +747,7 @@ export function AIProviderConfig({
           </div>
         )}
 
-        {selectedProvider === "custom" && (
+        {showManualProviderFields && selectedProvider === "custom" && (
           <div className="space-y-1">
             <div className="space-y-0.5">
               <Label htmlFor="baseUrl" className="text-xs">base url</Label>
@@ -669,7 +816,7 @@ export function AIProviderConfig({
           </div>
         )}
 
-        {selectedProvider === "openai-chatgpt" && (
+        {showManualProviderFields && selectedProvider === "openai-chatgpt" && (
           <div className="space-y-1">
             <div className="space-y-0.5">
               <Label className="text-xs">chatgpt account</Label>
@@ -699,7 +846,7 @@ export function AIProviderConfig({
           </div>
         )}
 
-        {selectedProvider === "pi" && (
+        {showManualProviderFields && selectedProvider === "pi" && (
           <div className="space-y-0.5">
             <Label htmlFor="model" className="text-xs">model</Label>
             <Select
@@ -902,6 +1049,7 @@ export const AIPresetsSelector = ({
   noneLabel = "none (use pipe defaults)",
   compact = false,
 }: AIPresetsSelectorProps) => {
+  const commandListId = "ai-preset-selector-list";
   const { settings, updateSettings } = useSettings();
   const [open, setOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1178,6 +1326,7 @@ export const AIPresetsSelector = ({
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
+                  aria-controls={commandListId}
                   className={cn(
                     "w-full justify-between hover:bg-accent hover:text-accent-foreground",
                     compact && "h-8 text-xs",
@@ -1243,7 +1392,7 @@ export const AIPresetsSelector = ({
           <PopoverContent className="min-w-[500px] w-[--radix-popover-trigger-width] p-0">
             <Command>
               <CommandInput placeholder="search presets..." />
-              <CommandList>
+              <CommandList id={commandListId}>
                 <CommandEmpty>no presets found.</CommandEmpty>
                 {allowNone && (
                   <CommandGroup>

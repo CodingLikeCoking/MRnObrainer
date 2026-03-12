@@ -96,5 +96,7 @@ describe("RewindSection", () => {
     expect(screen.getByText("Safer default: local models")).toBeInTheDocument();
     expect(screen.getByText("Scheduled delivery")).toBeInTheDocument();
     expect(screen.getByText("Telegram bot token")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /manual overrides/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /open \.env/i })).not.toBeInTheDocument();
   });
 });

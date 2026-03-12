@@ -19,7 +19,14 @@ interface Config {
   syncInterval: number;
   skipSync: boolean;
   skipSkills: boolean;
+  skipIntentWorker: boolean;
   verbose: boolean;
+  temporalAddress: string;
+  temporalNamespace: string;
+  workerTaskQueue: string;
+  workerBuildId: string;
+  workerConfigPath: string;
+  oracleApiUrl: string;
 }
 
 function parseArgs(): Config {
@@ -31,7 +38,14 @@ function parseArgs(): Config {
     syncInterval: 3600,
     skipSync: false,
     skipSkills: false,
+    skipIntentWorker: false,
     verbose: false,
+    temporalAddress: "127.0.0.1:7233",
+    temporalNamespace: "default",
+    workerTaskQueue: "screenpipe.intent",
+    workerBuildId: "screenpipe-intent-worker-v1",
+    workerConfigPath: "~/.screenpipe/intent-worker/config.json",
+    oracleApiUrl: "http://127.0.0.1:3030",
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -63,6 +77,27 @@ function parseArgs(): Config {
         break;
       case "--skip-skills":
         config.skipSkills = true;
+        break;
+      case "--skip-intent-worker":
+        config.skipIntentWorker = true;
+        break;
+      case "--temporal-address":
+        config.temporalAddress = args[++i] || config.temporalAddress;
+        break;
+      case "--temporal-namespace":
+        config.temporalNamespace = args[++i] || config.temporalNamespace;
+        break;
+      case "--worker-task-queue":
+        config.workerTaskQueue = args[++i] || config.workerTaskQueue;
+        break;
+      case "--worker-build-id":
+        config.workerBuildId = args[++i] || config.workerBuildId;
+        break;
+      case "--worker-config-path":
+        config.workerConfigPath = args[++i] || config.workerConfigPath;
+        break;
+      case "--oracle-api-url":
+        config.oracleApiUrl = args[++i] || config.oracleApiUrl;
         break;
       case "--verbose":
       case "-v":
@@ -96,6 +131,13 @@ OPTIONS:
   --sync-interval <s>   Sync frequency in seconds (default: 3600)
   --skip-sync           Don't set up data sync
   --skip-skills         Don't install skills
+  --skip-intent-worker  Don't write Temporal/intent worker bootstrap files
+  --temporal-address    Temporal server address (default: 127.0.0.1:7233)
+  --temporal-namespace  Temporal namespace (default: default)
+  --worker-task-queue   Temporal task queue (default: screenpipe.intent)
+  --worker-build-id     Worker build id label for deployments
+  --worker-config-path  Remote worker config path
+  --oracle-api-url      Oracle Screenpipe HTTP API for the worker
   -v, --verbose         Show debug output
 
 EXAMPLES:
@@ -105,14 +147,18 @@ EXAMPLES:
   # Setup with custom sync interval (30 min)
   bunx @screenpipe/agent --setup user@1.2.3.4 --morning 07:30 --sync-interval 1800
 
+  # Pair a remote Temporal-backed intent worker
+  bunx @screenpipe/agent --setup worker-host --temporal-address 10.0.0.5:7233 --worker-task-queue screenpipe.intent
+
   # Remove integration
   bunx @screenpipe/agent --remove openclaw
 
 WHAT IT DOES:
   1. Sets up screen data sync daemon (survives reboot)
   2. Installs screenpipe skills (recall, search, digest, context)
-  3. Adds morning summary cron job to your agent
-  4. Your agent sends you daily briefings via Telegram/WhatsApp/etc
+  3. Writes Temporal-backed intent worker bootstrap config
+  4. Adds morning summary cron job to your agent
+  5. Your agent sends you daily briefings via Telegram/WhatsApp/etc
 `);
 }
 
@@ -247,13 +293,61 @@ chmod +x ~/clawd/screenpipe-morning-trigger.sh"`,
   );
 }
 
+function buildIntentWorkerConfig(config: Config) {
+  return JSON.stringify(
+    {
+      temporalAddress: config.temporalAddress,
+      temporalNamespace: config.temporalNamespace,
+      taskQueue: config.workerTaskQueue,
+      buildId: config.workerBuildId,
+      oracleApiUrl: config.oracleApiUrl,
+      maxConcurrentActivities: 4,
+      maxConcurrentWorkflows: 8,
+      logLevel: config.verbose ? "debug" : "info",
+    },
+    null,
+    2
+  );
+}
+
+async function setupIntentWorker(config: Config) {
+  const configJson = buildIntentWorkerConfig(config);
+  exec(
+    `ssh ${config.remote} "mkdir -p ~/.screenpipe/intent-worker ~/clawd/bin && cat > ${config.workerConfigPath} << 'EOF'
+${configJson}
+EOF"`,
+    config.verbose
+  );
+
+  const launcher = `#!/bin/bash
+set -euo pipefail
+CONFIG_PATH="${config.workerConfigPath}"
+if command -v bunx >/dev/null 2>&1; then
+  exec bunx @screenpipe/intent-worker run --config "$CONFIG_PATH"
+fi
+if command -v node >/dev/null 2>&1; then
+  exec npx @screenpipe/intent-worker run --config "$CONFIG_PATH"
+fi
+echo "Neither bunx nor npx is available on this host." >&2
+exit 1
+`;
+
+  exec(
+    `ssh ${config.remote} "cat > ~/clawd/bin/screenpipe-intent-worker << 'EOF'
+${launcher}
+EOF
+chmod +x ~/clawd/bin/screenpipe-intent-worker"`,
+    config.verbose
+  );
+}
+
 async function setup(config: Config) {
   if (!config.remote) {
     console.error("Error: --setup requires a host (e.g., --setup openclaw)");
     process.exit(1);
   }
 
-  const totalSteps = 4;
+  const totalSteps = 5;
   console.log(`\n🚀 Setting up Screenpipe integration with ${config.remote}...\n`);
 
   // Step 1: Test SSH connection
@@ -362,13 +456,24 @@ sqlite3 ~/.screenpipe/db.sqlite "SELECT app_name, COUNT(*) FROM ocr_text GROUP B
     log(3, totalSteps, "Skipping skills installation (--skip-skills)");
   }
 
-  // Step 4: Set up morning summary
+  // Step 4: Prepare Temporal intent worker bootstrap
+  if (!config.skipIntentWorker) {
+    log(4, totalSteps, "Writing Temporal intent worker bootstrap...");
+    await setupIntentWorker(config);
+    console.log(`      → Temporal address: ${config.temporalAddress}`);
+    console.log(`      → Task queue: ${config.workerTaskQueue}`);
+    console.log(`      → Remote config: ${config.workerConfigPath}`);
+  } else {
+    log(4, totalSteps, "Skipping intent worker bootstrap (--skip-intent-worker)");
+  }
+
+  // Step 5: Set up morning summary
   if (config.morning) {
-    log(4, totalSteps, `Adding morning summary at ${config.morning}...`);
+    log(5, totalSteps, `Adding morning summary at ${config.morning}...`);
     await setupMorningCron(config.remote, config.morning, config.verbose);
     console.log(`      → Scheduled for ${config.morning} daily`);
   } else {
-    log(4, totalSteps, "Skipping morning summary (use --morning HH:MM to enable)");
+    log(5, totalSteps, "Skipping morning summary (use --morning HH:MM to enable)");
   }
 
   // Done!
@@ -379,6 +484,7 @@ sqlite3 ~/.screenpipe/db.sqlite "SELECT app_name, COUNT(*) FROM ocr_text GROUP B
   }
 
   console.log(`   💡 Ask your agent: "What was I working on yesterday?"`);
+  console.log(`   🤖 Remote worker bootstrap: ~/clawd/bin/screenpipe-intent-worker`);
   console.log(`\n   To remove: bunx @screenpipe/agent --remove ${config.remote}\n`);
 }
 
@@ -428,6 +534,17 @@ async function remove(config: Config) {
     console.log("   ✓ Remote skills removed");
   } catch {
     console.log("   - No remote skills found");
+  }
+
+  // Remove intent worker bootstrap
+  try {
+    exec(
+      `ssh ${config.remote} "rm -f ~/clawd/bin/screenpipe-intent-worker ${config.workerConfigPath}"`,
+      config.verbose
+    );
+    console.log("   ✓ Intent worker bootstrap removed");
+  } catch {
+    console.log("   - No intent worker bootstrap found");
   }
 
   console.log("\n✅ Screenpipe integration removed\n");
@@ -495,6 +612,24 @@ async function status(config: Config) {
     }
   } catch {
     console.log(`   Morning summary: - not scheduled`);
+  }
+
+  // Check intent worker bootstrap
+  try {
+    const workerConfig = exec(
+      `ssh ${config.remote} "cat ${config.workerConfigPath} 2>/dev/null"`,
+      false
+    ).trim();
+    if (workerConfig) {
+      const parsed = JSON.parse(workerConfig);
+      console.log(
+        `   Intent worker: ✓ queue=${parsed.taskQueue} temporal=${parsed.temporalAddress}`
+      );
+    } else {
+      console.log(`   Intent worker: - not configured`);
+    }
+  } catch {
+    console.log(`   Intent worker: - not configured`);
   }
 
   console.log("");

@@ -31,7 +31,7 @@ describe("ReadContent", () => {
 
     expect(screen.queryByText(/screenpi\.pe\/welcome/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /open in browser/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/MRnObrainer is verifying local capture/i)).toBeInTheDocument();
-    expect(screen.getByText(/stay here while the local engine warms up/i)).toBeInTheDocument();
+    expect(screen.getByText(/getting your timeline ready/i)).toBeInTheDocument();
+    expect(screen.getByText(/we're checking that your recent activity is showing up on this mac/i)).toBeInTheDocument();
   });
 });

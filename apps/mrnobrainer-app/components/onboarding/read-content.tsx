@@ -86,7 +86,7 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
           transition={{ duration: 1.5, repeat: Infinity }}
         />
         <span className="font-mono text-xs text-muted-foreground">
-          capture warming up · {seconds}s
+          timeline check · {seconds}s
           {framesDetected > 0 && ` · ${framesDetected} checks`}
         </span>
       </motion.div>
@@ -99,15 +99,14 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
       >
         <div className="space-y-2 text-center">
           <h2 className="font-sans text-lg font-bold lowercase">
-            MRnObrainer is verifying local capture
+            getting your timeline ready
           </h2>
           <p className="font-mono text-sm leading-relaxed text-muted-foreground">
-            stay here while the local engine warms up.
+            we&apos;re checking that your recent activity is showing up on this Mac.
             <br />
-            once frames are flowing, you&apos;ll move to the final step and then
-            open the dashboard with a verified timeline.
+            once it is ready, you&apos;ll move to the final step and open the dashboard.
             <br />
-            no external welcome page, no detour.
+            no extra account setup, no browser detour.
           </p>
         </div>
 
@@ -117,7 +116,7 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
               {verification.statusLabel}
             </span>
             <span className="font-mono text-xs text-muted-foreground">
-              {framesDetected > 0 ? `${framesDetected} checks` : "waiting locally"}
+              {framesDetected > 0 ? `${framesDetected} checks` : "checking on this Mac"}
             </span>
           </div>
           <p className="font-mono text-xs text-muted-foreground">

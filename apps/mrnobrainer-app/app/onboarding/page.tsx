@@ -12,7 +12,6 @@ import ReadContent from "@/components/onboarding/read-content";
 import ShortcutGate from "@/components/onboarding/shortcut-gate";
 import PrivacyStep from "@/components/onboarding/privacy-step";
 import TourStep from "@/components/onboarding/tour-step";
-import WorkerPairingStep from "@/components/onboarding/worker-pairing-step";
 import { useOnboarding } from "@/lib/hooks/use-onboarding";
 import posthog from "posthog-js";
 import { commands } from "@/lib/utils/tauri";
@@ -63,8 +62,8 @@ export default function OnboardingPage() {
           read: "capture",
           capture: "capture",
           tour: "tour",
-          pair_worker: "pair-worker",
-          "pair-worker": "pair-worker",
+          pair_worker: "shortcut",
+          "pair-worker": "shortcut",
           shortcut: "shortcut",
           // backwards compat with old onboarding
           login: "permissions",
@@ -166,9 +165,6 @@ export default function OnboardingPage() {
           )}
           {currentSlide === "tour" && (
             <TourStep handleNextSlide={handleNextSlide} />
-          )}
-          {currentSlide === "pair-worker" && (
-            <WorkerPairingStep handleNextSlide={handleNextSlide} />
           )}
           {currentSlide === "shortcut" && <ShortcutGate />}
         </div>

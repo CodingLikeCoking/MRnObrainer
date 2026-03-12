@@ -10,6 +10,7 @@ pub mod data;
 pub mod elements;
 pub mod frames;
 pub mod health;
+pub mod intent;
 pub mod meetings;
 pub mod power;
 pub mod retranscribe;

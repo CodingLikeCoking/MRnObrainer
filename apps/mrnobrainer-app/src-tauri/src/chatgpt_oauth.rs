@@ -193,16 +193,14 @@ async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<String, 
         })
         .ok_or_else(|| "no authorization code in callback".to_string())?;
 
-    let html = concat!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
-        "<html><body style=\"font-family:system-ui;text-align:center;padding:60px\">",
-        "<h2>Login successful!</h2>",
-        &format!(
-            "<p>You can close this tab and return to {}.</p>",
-            crate::brand::PRODUCT_NAME
-        ),
-        "<script>window.close()</script>",
-        "</body></html>"
+    let html = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
+<html><body style=\"font-family:system-ui;text-align:center;padding:60px\">\
+<h2>Login successful!</h2>\
+<p>You can close this tab and return to {}.</p>\
+<script>window.close()</script>\
+</body></html>",
+        crate::brand::PRODUCT_NAME
     );
     let _ = stream.write_all(html.as_bytes()).await;
 

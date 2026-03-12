@@ -16,9 +16,11 @@ import type {
 
 export interface CapturedSearchItem {
   type?: string;
+  frame_id?: number;
   content?: {
     timestamp?: string;
     app_name?: string;
+    frame_id?: number;
   } | null;
 }
 

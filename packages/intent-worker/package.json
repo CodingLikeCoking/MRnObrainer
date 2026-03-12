@@ -1,0 +1,27 @@
+{
+  "name": "@screenpipe/intent-worker",
+  "version": "0.1.0",
+  "description": "Temporal-backed worker runtime for Screenpipe intent automation.",
+  "type": "module",
+  "bin": {
+    "screenpipe-intent-worker": "dist/index.js"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/workflows.ts --outdir dist --target node",
+    "dev": "bun run src/index.ts",
+    "prepublishOnly": "bun run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@temporalio/activity": "^1.11.5",
+    "@temporalio/client": "^1.11.5",
+    "@temporalio/worker": "^1.11.5",
+    "@temporalio/workflow": "^1.11.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

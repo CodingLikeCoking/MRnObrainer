@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Loader2,
-  Server,
   Eye,
   EyeOff,
   Settings2,
@@ -101,6 +100,7 @@ export function OpenClawCard() {
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showFinishSteps, setShowFinishSteps] = useState(false);
   const [discoveredHosts, setDiscoveredHosts] = useState<DiscoveredHost[]>([]);
 
   useEffect(() => {
@@ -211,7 +211,7 @@ export function OpenClawCard() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-sm font-semibold text-foreground">OpenClaw Worker Import</h3>
+              <h3 className="text-sm font-semibold text-foreground">OpenClaw worker setup</h3>
               {testResult?.ok && (
                 <span className="px-2 py-0.5 text-xs font-medium bg-green-500/15 text-green-600 rounded-full">
                   validated
@@ -219,11 +219,10 @@ export function OpenClawCard() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Detect an existing OpenClaw host, import it as a worker, then copy
-              the exact pairing commands you need to mirror Oracle context onto it.
+              Find an existing OpenClaw machine, test the connection, and add it as a worker when you are ready.
             </p>
             <div className="mb-3 rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-              This release only imports and validates the worker. MRnObrainer does not mutate the remote host automatically yet.
+              MRnObrainer can discover and validate a worker for you. Manual SSH details stay hidden unless you need them.
             </div>
 
             {/* If not configured yet, show discovered hosts or manual form */}
@@ -231,15 +230,15 @@ export function OpenClawCard() {
               <div className="space-y-2 mb-3">
                 {discoveredHosts.length > 0 && (
                   <>
-                    <p className="text-xs text-muted-foreground">pick a server:</p>
+                    <p className="text-xs text-muted-foreground">find my worker:</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {discoveredHosts.map((h, i) => (
+                      {discoveredHosts.map((h) => (
                         <button
-                          key={i}
-                          onClick={() => selectHost(h)}
-                          className="px-2.5 py-1 text-xs border border-border rounded-md hover:bg-muted transition-colors"
+                          key={`${h.host}:${h.port}:${h.source}`}
+                            onClick={() => selectHost(h)}
+                            className="px-2.5 py-1 text-xs border border-border rounded-md hover:bg-muted transition-colors"
                         >
-                          {h.user ? `${h.user}@` : ""}{h.host}
+                          {h.host}
                           {h.port !== 22 ? `:${h.port}` : ""}
                           <span className="text-muted-foreground ml-1.5">({h.source})</span>
                         </button>
@@ -247,7 +246,7 @@ export function OpenClawCard() {
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <div className="h-px flex-1 bg-border" />
-                      <span className="text-[10px] text-muted-foreground">or enter manually</span>
+                      <span className="text-[10px] text-muted-foreground">or use manual details</span>
                       <div className="h-px flex-1 bg-border" />
                     </div>
                   </>
@@ -257,26 +256,41 @@ export function OpenClawCard() {
                     {importCandidates.length} worker candidates detected
                   </p>
                 )}
-                {/* Manual entry */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="user@host"
-                    value={config.user && config.host ? `${config.user}@${config.host}` : ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const at = val.indexOf("@");
-                      if (at >= 0) {
-                        updateConfig({ user: val.slice(0, at), host: val.slice(at + 1) });
-                      } else {
-                        updateConfig({ host: val });
-                      }
-                    }}
-                    className="text-xs h-7 flex-1"
-                    spellCheck={false}
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                  />
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setShowAdvanced((value) => !value)}
+                >
+                  {showAdvanced ? "Hide manual details" : "Manual details"}
+                </Button>
+                {showAdvanced ? (
+                  <div className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Use this only if automatic discovery did not find your worker.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="user@host"
+                        value={config.user && config.host ? `${config.user}@${config.host}` : ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const at = val.indexOf("@");
+                          if (at >= 0) {
+                            updateConfig({ user: val.slice(0, at), host: val.slice(at + 1) });
+                          } else {
+                            updateConfig({ host: val });
+                          }
+                        }}
+                        className="text-xs h-7 flex-1"
+                        spellCheck={false}
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : (
               /* Configured — show compact summary + actions */
@@ -295,7 +309,7 @@ export function OpenClawCard() {
                   <button
                     onClick={() => setShowAdvanced(!showAdvanced)}
                     className="text-muted-foreground hover:text-foreground"
-                    title="advanced settings"
+                    title="manual details"
                   >
                     <Settings2 className="h-3 w-3" />
                   </button>
@@ -352,7 +366,7 @@ export function OpenClawCard() {
                     </div>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="remote path"
+                        placeholder="remote folder"
                         value={config.remotePath}
                         onChange={(e) => updateConfig({ remotePath: e.target.value })}
                         className="text-xs h-7 flex-1"
@@ -400,18 +414,7 @@ export function OpenClawCard() {
                   size="sm"
                   className="h-7 text-xs"
                 >
-                  {alreadyImported ? "imported" : "import worker"}
-                </Button>
-
-                <Button
-                  onClick={copyPairingSteps}
-                  disabled={!pairingSteps.length}
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto h-7 gap-1 text-xs"
-                >
-                  <Copy className="h-3 w-3" />
-                  Copy commands
+                  {alreadyImported ? "added" : "add worker"}
                 </Button>
               </div>
             )}
@@ -422,17 +425,42 @@ export function OpenClawCard() {
           <div className="space-y-3 border-t border-border bg-muted/30 px-4 py-3">
             <div className="flex items-center gap-2 text-xs font-medium text-foreground">
               <Waypoints className="h-3.5 w-3.5" />
-              Finish pairing this worker
+              Finish setup
             </div>
-            <div className="space-y-2">
-              {pairingSteps.map((step) => (
-                <div key={step} className="rounded-xl border border-border/60 bg-background px-3 py-2 font-mono text-[11px] text-muted-foreground">
-                  {step}
-                </div>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              After adding the worker, finish the remote setup on that machine before turning on recurring sync.
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-fit gap-1 px-0 text-xs"
+              onClick={() => setShowFinishSteps((value) => !value)}
+            >
+              <Copy className="h-3 w-3" />
+              {showFinishSteps ? "Hide setup steps" : "Show setup steps"}
+            </Button>
+            {showFinishSteps ? (
+              <div className="space-y-2">
+                {pairingSteps.map((step) => (
+                  <div key={step} className="rounded-xl border border-border/60 bg-background px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                    {step}
+                  </div>
+                ))}
+                <Button
+                  onClick={copyPairingSteps}
+                  disabled={!pairingSteps.length}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-fit gap-1 text-xs"
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy setup steps
+                </Button>
+              </div>
+            ) : null}
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span>Imported workers appear under Oracle + Workers in MRnObrainer settings.</span>
+              <span>Added workers appear under Oracle + Workers in MRnObrainer settings.</span>
               <button
                 onClick={() => openUrl("https://github.com/openclaw/openclaw")}
                 className="ml-auto hover:text-foreground transition-colors"

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { useOnboarding } from "@/lib/hooks/use-onboarding";
@@ -68,7 +68,6 @@ export default function ShortcutGate() {
   const { isMac } = usePlatform();
   const { completeOnboarding } = useOnboarding();
   const [seconds, setSeconds] = useState(0);
-  const [showSkip, setShowSkip] = useState(false);
   const isCompletingRef = useRef(false);
 
   const keys = parseShortcutKeys(settings.showScreenpipeShortcut, isMac);
@@ -77,12 +76,6 @@ export default function ShortcutGate() {
   useEffect(() => {
     const interval = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // Show skip after 30s
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSkip(true), 30000);
-    return () => clearTimeout(timer);
   }, []);
 
   const handleComplete = useCallback(async () => {
@@ -112,12 +105,14 @@ export default function ShortcutGate() {
     }
   }, [completeOnboarding]);
 
-  const handleSkip = async () => {
+  const handleOpenDashboard = async () => {
     if (isCompletingRef.current) return;
     isCompletingRef.current = true;
 
-    posthog.capture("onboarding_shortcut_skipped");
+    posthog.capture("onboarding_dashboard_opened");
     posthog.capture("onboarding_completed");
+
+    const showMainWindow = commands.showWindow("Main").catch(() => {});
 
     try {
       await completeOnboarding();
@@ -130,7 +125,7 @@ export default function ShortcutGate() {
       console.error("failed to schedule notification:", e);
     }
     try {
-      await commands.showWindow("Main");
+      await showMainWindow;
       window.close();
     } catch {
       /* ignore */
@@ -178,36 +173,29 @@ export default function ShortcutGate() {
       >
         <div className="text-center space-y-1">
           <p className="font-mono text-sm text-muted-foreground">
-            press to open your local dashboard
+            your recent activity is ready
           </p>
           <p className="font-mono text-xs text-muted-foreground/60">
-            then ask one question, review the timeline, or run the daily review
+            open the dashboard now, then ask a question or review your timeline
           </p>
         </div>
+
+        <button
+          onClick={handleOpenDashboard}
+          className="w-full max-w-sm border border-foreground bg-foreground py-3 font-mono text-sm uppercase tracking-[0.18em] text-background transition-colors hover:bg-background hover:text-foreground"
+        >
+          Open dashboard
+        </button>
 
         <div className="flex items-center gap-3">
           {keys.map((key, i) => (
-            <KeyCap key={`${key}-${i}`} label={key} index={i} />
+            <KeyCap key={key} label={key} index={i} />
           ))}
         </div>
+        <p className="font-mono text-xs text-muted-foreground/60">
+          you can also use the shortcut anytime
+        </p>
       </motion.div>
-
-      {/* Skip escape hatch — appears after 30s */}
-      <div className="h-6">
-        <AnimatePresence>
-          {showSkip && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleSkip}
-              className="font-mono text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-            >
-              open dashboard instead →
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getInitialSlideForMode,
   getSlidesForMode,
+  resolveOnboardingMode,
 } from "@/lib/onboarding-flow";
 
 describe("onboarding-flow", () => {
@@ -23,8 +24,8 @@ describe("onboarding-flow", () => {
     expect(getInitialSlideForMode("learn")).toBe("privacy");
   });
 
-  it("limits pair_worker mode to the import flow", () => {
-    expect(getSlidesForMode("pair_worker")).toEqual(["pair-worker", "shortcut"]);
-    expect(getInitialSlideForMode("pair_worker")).toBe("pair-worker");
+  it("falls legacy pair_worker mode back to setup", () => {
+    expect(resolveOnboardingMode("pair_worker")).toBe("setup");
+    expect(getInitialSlideForMode(resolveOnboardingMode("pair_worker"))).toBe("privacy");
   });
 });

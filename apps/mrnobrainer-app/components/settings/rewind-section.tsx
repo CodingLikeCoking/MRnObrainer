@@ -8,6 +8,8 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   FolderOpen,
   LayoutGrid,
   Loader2,
@@ -32,7 +34,10 @@ import {
   type RewindDashboardWidget,
   type RewindSettingsState,
 } from "@/lib/rewind/home-model";
-import { getPipeEnvStatusFromText } from "@/lib/rewind/pipe-env";
+import {
+  getPipeEnvStatusFromText,
+  type PipeEnvStatus,
+} from "@/lib/rewind/pipe-env";
 
 const DASHBOARD_WIDGET_LABELS: Record<RewindDashboardWidget, { title: string; description: string }> = {
   goal: {
@@ -83,7 +88,13 @@ export function RewindSection() {
   const [chatGptConnected, setChatGptConnected] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [pipeInstalled, setPipeInstalled] = useState(false);
-  const [notionConfigured, setNotionConfigured] = useState(false);
+  const [showManualOverrides, setShowManualOverrides] = useState(false);
+  const [pipeEnvStatus, setPipeEnvStatus] = useState<PipeEnvStatus>({
+    configured: false,
+    missingKeys: ["NOTION_API_KEY", "NOTION_DATABASE_ID"],
+    invalidValues: [],
+    fixMode: "guided",
+  });
 
   const persist = async (updates: Partial<typeof rewindSettings>) => {
     await updateSettings({
@@ -156,9 +167,14 @@ export function RewindSection() {
       const envPath = await join(pipeDir, ".env");
       if (await exists(envPath)) {
         const envText = await readTextFile(envPath);
-        setNotionConfigured(getPipeEnvStatusFromText(envText).notionConfigured);
+        setPipeEnvStatus(getPipeEnvStatusFromText(envText));
       } else {
-        setNotionConfigured(false);
+        setPipeEnvStatus({
+          configured: false,
+          missingKeys: ["NOTION_API_KEY", "NOTION_DATABASE_ID"],
+          invalidValues: [],
+          fixMode: "guided",
+        });
       }
     };
     checkPipe().catch(() => setPipeInstalled(false));
@@ -226,6 +242,17 @@ export function RewindSection() {
     }
   };
 
+  const notionStatusLabel = pipeEnvStatus.configured
+    ? "notion connected"
+    : pipeEnvStatus.invalidValues.length > 0
+      ? "notion needs attention"
+      : "notion setup needed";
+  const notionStatusDetail = pipeEnvStatus.configured
+    ? "Daily review can use your saved connector details."
+    : pipeEnvStatus.invalidValues.length > 0
+      ? "Saved connector values still use placeholders. Finish the guided setup or update the manual override."
+      : "The daily review pipe is waiting for connector details.";
+
   return (
     <div className="space-y-6">
       <div>
@@ -263,15 +290,11 @@ export function RewindSection() {
               </span>
               <span className="inline-flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                {notionConfigured ? "notion configured" : "notion not configured"}
+                {notionStatusLabel}
               </span>
               <Button type="button" variant="outline" size="sm" className="h-8 gap-2" onClick={openPipeFolder}>
                 <FolderOpen className="h-3.5 w-3.5" />
                 Open pipe folder
-              </Button>
-              <Button type="button" variant="outline" size="sm" className="h-8 gap-2" onClick={openEnvFile}>
-                <FolderOpen className="h-3.5 w-3.5" />
-                Open .env
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-8 gap-2" onClick={openOutputFolder}>
                 <FolderOpen className="h-3.5 w-3.5" />
@@ -279,8 +302,40 @@ export function RewindSection() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Generated connector settings stay behind the UI. Open raw `.env` only from Advanced when you need manual overrides.
+              {notionStatusDetail}
             </p>
+            <div className="rounded-2xl border border-border/60 bg-muted/10 p-3">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left"
+                onClick={() => setShowManualOverrides((value) => !value)}
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Manual overrides
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Open the raw connector file only if guided setup is not enough.
+                  </p>
+                </div>
+                {showManualOverrides ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+              {showManualOverrides ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                  <Button type="button" variant="outline" size="sm" className="h-8 gap-2" onClick={openEnvFile}>
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Open .env
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Use this only for manual connector fixes or placeholder cleanup.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -82,6 +82,121 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "list_intent_candidates",
+    description:
+      "List persisted intent candidates derived from browser, file, UI, and audio activity on the oracle machine.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        limit: {
+          type: "integer",
+          description: "Max candidates to return. Default: 20",
+        },
+        offset: {
+          type: "integer",
+          description: "Skip N candidates. Default: 0",
+        },
+      },
+    },
+  },
+  {
+    name: "list_task_episodes",
+    description:
+      "List grouped task episodes extracted from the oracle's recent activity.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        limit: {
+          type: "integer",
+          description: "Max task episodes to return. Default: 20",
+        },
+        offset: {
+          type: "integer",
+          description: "Skip N task episodes. Default: 0",
+        },
+      },
+    },
+  },
+  {
+    name: "get_automation_policy",
+    description:
+      "Fetch the current oracle-side automation policy, including approval mode and run window.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        scope: {
+          type: "string",
+          description: "Policy scope. Default: default",
+        },
+      },
+    },
+  },
+  {
+    name: "create_automation_request",
+    description:
+      "Create an automation request from an episode with an execution plan. This may return an approval-gated request or enqueue worker outbox work immediately.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        episode_id: {
+          type: "integer",
+          description: "Task episode ID to automate.",
+        },
+        policy_scope: {
+          type: "string",
+          description: "Automation policy scope. Default: default",
+        },
+        execution_plan: {
+          type: "object",
+          description:
+            "Execution plan object with summary, preferred_executor, fallback_executor, has_side_effects, uses_sensitive_data, touched_resources, and steps.",
+        },
+        run_after: {
+          type: "string",
+          description: "Optional ISO timestamp to defer execution.",
+        },
+      },
+      required: ["episode_id", "execution_plan"],
+    },
+  },
+  {
+    name: "flush_worker_outbox",
+    description:
+      "Dispatch due outbox items to a worker. This marks pending rows as dispatched exactly once.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        limit: {
+          type: "integer",
+          description: "Max outbox entries to dispatch. Default: 10",
+        },
+      },
+    },
+  },
+  {
+    name: "ack_worker_outbox",
+    description:
+      "Acknowledge a dispatched outbox item as succeeded or failed.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        outbox_id: {
+          type: "integer",
+          description: "Dispatched worker outbox entry ID.",
+        },
+        success: {
+          type: "boolean",
+          description: "Whether execution succeeded.",
+        },
+        last_error: {
+          type: "string",
+          description: "Optional failure reason when success=false.",
+        },
+      },
+      required: ["outbox_id", "success"],
+    },
+  },
 ];
 
 // Helper function to make HTTP requests
@@ -94,6 +209,14 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}): Promise<Re
       ...options.headers,
     },
   });
+}
+
+async function fetchJSON(endpoint: string, options: RequestInit = {}) {
+  const response = await fetchAPI(endpoint, options);
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`);
+  }
+  return response.json();
 }
 
 // Create MCP server
@@ -184,6 +307,104 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         {
           type: "text",
           text: header + "\n\n" + formattedResults.join("\n---\n"),
+        },
+      ],
+    };
+  }
+
+  if (name === "list_intent_candidates") {
+    const params = new URLSearchParams();
+    params.append("limit", String(args.limit ?? 20));
+    params.append("offset", String(args.offset ?? 0));
+    const data = await fetchJSON(`/intent/candidates?${params.toString()}`);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "list_task_episodes") {
+    const params = new URLSearchParams();
+    params.append("limit", String(args.limit ?? 20));
+    params.append("offset", String(args.offset ?? 0));
+    const data = await fetchJSON(`/intent/episodes?${params.toString()}`);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "get_automation_policy") {
+    const scope = String(args.scope ?? "default");
+    const data = await fetchJSON(`/automation/policy?scope=${encodeURIComponent(scope)}`);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "create_automation_request") {
+    const data = await fetchJSON("/automation/requests", {
+      method: "POST",
+      body: JSON.stringify({
+        episode_id: args.episode_id,
+        policy_scope: args.policy_scope ?? "default",
+        execution_plan: args.execution_plan,
+        run_after: args.run_after,
+      }),
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "flush_worker_outbox") {
+    const data = await fetchJSON("/worker/outbox/flush", {
+      method: "POST",
+      body: JSON.stringify({
+        limit: args.limit ?? 10,
+      }),
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "ack_worker_outbox") {
+    const data = await fetchJSON(`/worker/outbox/${args.outbox_id}/ack`, {
+      method: "POST",
+      body: JSON.stringify({
+        success: args.success,
+        last_error: args.last_error,
+      }),
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data, null, 2),
         },
       ],
     };

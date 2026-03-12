@@ -50,6 +50,7 @@ interface ActivityPoint {
   normalizedAppName: string;
   timestamp: string;
   timeLabel: string;
+  frameId: number | null;
 }
 
 export interface DeriveAutomationOpportunitiesInput {
@@ -100,6 +101,12 @@ function buildActivityPoints(items: CapturedSearchItem[]): ActivityPoint[] {
     .map((item) => {
       const appName = item.content?.app_name?.trim() || "";
       const timestamp = item.content?.timestamp?.trim() || "";
+      const frameId =
+        typeof item.content?.frame_id === "number"
+          ? item.content.frame_id
+          : typeof item.frame_id === "number"
+            ? item.frame_id
+            : null;
       if (!appName || !timestamp) return null;
       const parsed = new Date(timestamp);
       if (!Number.isFinite(parsed.getTime())) return null;
@@ -108,6 +115,7 @@ function buildActivityPoints(items: CapturedSearchItem[]): ActivityPoint[] {
         normalizedAppName: normalizeAppName(appName),
         timestamp,
         timeLabel: formatTimeLabel(timestamp),
+        frameId,
       } satisfies ActivityPoint;
     })
     .filter((entry): entry is ActivityPoint => Boolean(entry))
@@ -153,8 +161,14 @@ function buildWalkthrough(
         ? `${point.appName} kept reappearing inside the same dev loop, which makes it a good automation checkpoint.`
         : `${point.appName} showed up during the same communication loop, so the automation should treat it as part of one end-of-day handoff.`,
     timestampLabel: point.timeLabel,
+    timestamp: point.timestamp,
     appName: point.appName,
     deviceLabel: "This Mac",
+    frameId: point.frameId,
+    annotationLabel:
+      lane === "developer"
+        ? `Focus on the ${point.appName} step`
+        : `Review the ${point.appName} handoff`,
   }));
 
   if (steps.length >= 3) return steps;
@@ -172,6 +186,10 @@ function buildWalkthrough(
     timestampLabel: "End of day",
     appName,
     deviceLabel: "This Mac",
+    annotationLabel:
+      lane === "developer"
+        ? `Review ${appName} in the replay`
+        : `Annotate ${appName} in the recap`,
   }));
 }
 
@@ -202,6 +220,10 @@ function buildOpportunityFromSequence(args: {
     repetitionCount,
     timeSavedMinutes: Math.min(45, Math.max(12, repetitionCount * 4)),
     confidence: Number(Math.min(0.96, 0.58 + repetitionCount * 0.07).toFixed(2)),
+    capabilityTags:
+      args.lane === "developer"
+        ? ["coding", "automation", "local-context"]
+        : ["ops", "communication", "automation"],
     sourceDevices: sourceDevices(args.branchGraph),
     recommendedSchedule: args.recommendedSchedule,
     riskLevel: "low",
@@ -334,6 +356,23 @@ export function createAutomationDraftBundle(
       requiredPermissions: defaultPermissions(input.opportunity),
       allowedPaths: input.allowedPaths,
       walkthrough,
+      inspect: {
+        proofBundleVersion: 1,
+        replayVideoPath: null,
+        replayVideoStatus: "pending",
+        summary: `Inspect ${input.opportunity.title} with a replay clip, annotated steps, and approval checkpoints after the automation runs.`,
+        timeline: walkthrough.map((step) => ({
+          id: step.id,
+          title: step.title,
+          detail: step.detail,
+          timestampLabel: step.timestampLabel,
+          timestamp: step.timestamp || null,
+          appName: step.appName || null,
+          deviceLabel: step.deviceLabel || null,
+          frameId: step.frameId ?? null,
+          annotationLabel: step.annotationLabel || null,
+        })),
+      },
     },
     null,
     2

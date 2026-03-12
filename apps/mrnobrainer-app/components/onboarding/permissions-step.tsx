@@ -149,6 +149,7 @@ export default function PermissionsStep({
   });
 
   const requiredPermissions = activePermissions.filter((p) => !p.optional);
+  const optionalPermissions = activePermissions.filter((p) => p.optional);
   const allRequiredGranted = requiredPermissions.every(
     (p) => statuses[p.id] === true
   );
@@ -276,14 +277,21 @@ export default function PermissionsStep({
           grant permissions
         </h1>
         <p className="font-mono text-[10px] text-muted-foreground mt-1 text-center max-w-xs">
-          MRnObrainer needs these macOS permissions to capture your screen, audio,
-          and app context
+          grant the required items to begin. extra context can wait until later.
         </p>
       </div>
 
-      {/* Permission rows */}
       <div className="space-y-2 w-full max-w-sm">
-        {activePermissions.map((perm) => (
+        <div className="rounded-2xl border border-border/60 bg-muted/10 p-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            required to start
+          </p>
+          <p className="mt-1 font-mono text-[10px] text-muted-foreground/80">
+            you only need the required items to begin.
+          </p>
+        </div>
+
+        {requiredPermissions.map((perm) => (
           <PermissionRow
             key={perm.id}
             icon={perm.icon}
@@ -293,6 +301,29 @@ export default function PermissionsStep({
             onGrant={() => handleGrant(perm)}
           />
         ))}
+
+        {optionalPermissions.length > 0 ? (
+          <>
+            <div className="rounded-2xl border border-dashed border-border/60 bg-background/80 p-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                optional extras
+              </p>
+              <p className="mt-1 font-mono text-[10px] text-muted-foreground/80">
+                these help MRnObrainer fill in extra context, but they do not block setup.
+              </p>
+            </div>
+            {optionalPermissions.map((perm) => (
+              <PermissionRow
+                key={perm.id}
+                icon={perm.icon}
+                title={perm.title}
+                subtitle={perm.subtitle}
+                granted={statuses[perm.id] === true}
+                onGrant={() => handleGrant(perm)}
+              />
+            ))}
+          </>
+        ) : null}
       </div>
 
       {/* Skip link */}
