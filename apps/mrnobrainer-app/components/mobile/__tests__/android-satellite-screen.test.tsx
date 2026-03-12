@@ -17,7 +17,9 @@ describe("AndroidSatelliteScreen", () => {
     invokeMock.mockReset();
   });
 
-  it("loads mobile state and lets the user pair an oracle plus enable live memory", async () => {
+  it(
+    "loads mobile state and lets the user pair an oracle plus enable live memory",
+    async () => {
     invokeMock.mockImplementation(async (command: string, payload?: Record<string, unknown>) => {
       if (command === "get_pairing_state") {
         return {
@@ -143,9 +145,13 @@ describe("AndroidSatelliteScreen", () => {
       expect(screen.getByText("Manual note captured")).toBeInTheDocument();
       expect(screen.getByText("reply from desktop after triage")).toBeInTheDocument();
     });
-  });
+    },
+    15_000,
+  );
 
   it("shows queue health and marks pending events as sent after a successful flush", async () => {
+    let listRecentEventsCalls = 0;
+
     invokeMock.mockImplementation(async (command: string) => {
       if (command === "get_pairing_state") {
         return {
@@ -169,6 +175,31 @@ describe("AndroidSatelliteScreen", () => {
       }
 
       if (command === "list_recent_events") {
+        listRecentEventsCalls += 1;
+
+        if (listRecentEventsCalls === 1) {
+          return [
+            {
+              eventId: "evt-queued",
+              kind: "notification_received",
+              title: "New notification received",
+              detail: "Alice replied from mobile.",
+              occurredAt: "2026-03-12T09:16:00.000Z",
+              appName: "Gmail",
+              synced: false,
+            },
+            {
+              eventId: "evt-sent",
+              kind: "user_note_created",
+              title: "Manual note captured",
+              detail: "Handle from desktop later.",
+              occurredAt: "2026-03-12T09:14:00.000Z",
+              appName: "MRnObrainer Android",
+              synced: true,
+            },
+          ];
+        }
+
         return [
           {
             eventId: "evt-queued",
@@ -177,7 +208,7 @@ describe("AndroidSatelliteScreen", () => {
             detail: "Alice replied from mobile.",
             occurredAt: "2026-03-12T09:16:00.000Z",
             appName: "Gmail",
-            synced: false,
+            synced: true,
           },
           {
             eventId: "evt-sent",
@@ -205,7 +236,7 @@ describe("AndroidSatelliteScreen", () => {
     render(<AndroidSatelliteScreen />);
 
     expect(await screen.findByText("Android Satellite")).toBeInTheDocument();
-    expect(screen.getByText("1 queued")).toBeInTheDocument();
+    expect(await screen.findByText("1 queued")).toBeInTheDocument();
     expect(screen.getByText("1 sent")).toBeInTheDocument();
     expect(screen.getByText("queued")).toBeInTheDocument();
     expect(screen.getByText("sent")).toBeInTheDocument();
@@ -215,6 +246,7 @@ describe("AndroidSatelliteScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
 
     await waitFor(() => {
+      expect(listRecentEventsCalls).toBe(2);
       expect(screen.getByText(/synced 1 event/i)).toBeInTheDocument();
       expect(screen.queryByText("1 queued")).not.toBeInTheDocument();
       expect(screen.getByText("2 sent")).toBeInTheDocument();

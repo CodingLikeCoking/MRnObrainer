@@ -20,11 +20,13 @@ function PrivacyRow({
   body: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+    <div className="glass-panel p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 text-muted-foreground">{icon}</div>
+        <div className="glass-chip mt-0.5 flex h-9 w-9 items-center justify-center p-0 text-primary shadow-none">
+          {icon}
+        </div>
         <div>
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground">
             {title}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -38,9 +40,11 @@ export default function PrivacyStep({ handleNextSlide }: PrivacyStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
-          Local by default
-        </p>
+        <div className="flex justify-center">
+          <p className="glass-chip px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+            Local by default
+          </p>
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Keep your work history on this Mac
         </h1>
@@ -71,7 +75,7 @@ export default function PrivacyStep({ handleNextSlide }: PrivacyStepProps) {
 
       <button
         onClick={handleNextSlide}
-        className="w-full border border-foreground bg-foreground py-3 font-mono text-sm uppercase tracking-[0.18em] text-background transition-colors hover:bg-background hover:text-foreground"
+        className="w-full rounded-full border border-transparent bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary-foreground shadow-glass-strong transition-all hover:bg-primary/90"
       >
         Continue
       </button>

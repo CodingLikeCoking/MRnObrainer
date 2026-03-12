@@ -379,7 +379,7 @@ function DesktopHomeInner() {
   return (
     <div className="flex flex-col items-center flex-1 mx-auto relative scrollbar-hide">
       {/* Transparent titlebar area - no drag region to prevent accidental window moves */}
-      <div className="h-8 bg-gradient-to-b from-black/15 to-transparent w-full fixed top-0 left-0 z-[1000] pointer-events-none" />
+      <div className="fixed left-0 top-0 z-[1000] h-8 w-full bg-gradient-to-b from-white/35 via-white/10 to-transparent pointer-events-none dark:from-white/12 dark:via-white/0" />
       
       <NotificationHandler />
       <PermissionBanner />
@@ -392,9 +392,9 @@ function DesktopHomeInner() {
           <ModelDownloadTracker />
           <UpdateBanner />
           
-          <div className="w-full scrollbar-hide bg-background relative">
+          <div className="relative w-full scrollbar-hide bg-transparent">
             {isServerDown && (
-              <div className="fixed right-4 top-10 z-50 flex items-center gap-2 rounded-full border bg-muted/90 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+              <div className="glass-toolbar shadow-glass-strong fixed right-4 top-10 z-50 flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
                 <WifiOff className="h-3 w-3" />
                 <span>{isHealthLoading ? `connecting to ${PRODUCT_NAME}...` : "capture service reconnecting..."}</span>
               </div>
@@ -439,8 +439,8 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6">
-        <div className="rounded-full border border-border/60 bg-background/90 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="glass-toolbar shadow-glass px-4 py-3 text-sm text-muted-foreground">
           loading mrnobrainer...
         </div>
       </div>

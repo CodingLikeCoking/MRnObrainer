@@ -110,8 +110,8 @@ function PermissionBadge({
   ready: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 px-4 py-3">
-      <span className="text-sm font-medium">{label}</span>
+    <div className="glass-chip flex items-center justify-between px-4 py-3">
+      <span className="text-sm font-medium text-foreground/90">{label}</span>
       <Badge variant={ready ? "default" : "outline"}>{ready ? "ready" : "needed"}</Badge>
     </div>
   );
@@ -224,16 +224,7 @@ export function AndroidSatelliteScreen() {
           lastSyncAt: result.lastSyncAt,
         }));
       }
-      setRecentEvents((current) =>
-        current.map((event) =>
-          event.synced === true
-            ? event
-            : {
-                ...event,
-                synced: true,
-              },
-        ),
-      );
+      setRecentEvents(await invoke<RecentEvent[]>("list_recent_events"));
       setStatusMessage(`synced ${result.syncedCount} event${result.syncedCount === 1 ? "" : "s"}`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "sync failed");
@@ -267,8 +258,8 @@ export function AndroidSatelliteScreen() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6">
-        <div className="flex items-center gap-3 rounded-full border border-border/60 bg-background/90 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="glass-toolbar shadow-glass flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           loading android satellite
         </div>
@@ -277,54 +268,70 @@ export function AndroidSatelliteScreen() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#f3efe6,transparent_42%),linear-gradient(180deg,#fffdf8_0%,#f7f3ea_100%)] px-4 py-6 text-foreground">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-        <Card className="overflow-hidden border-border/60 bg-background/95 shadow-lg">
+    <main className="relative min-h-screen overflow-hidden px-4 py-6 text-foreground">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(92,183,255,0.24),transparent_36%),radial-gradient(circle_at_bottom,rgba(12,87,146,0.18),transparent_32%)]" />
+      <div className="relative mx-auto flex w-full max-w-md flex-col gap-4">
+        <Card className="overflow-hidden shadow-[0_32px_80px_-48px_rgba(18,47,86,0.5)]">
           <CardHeader className="space-y-4 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-2">
-                <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
+                <Badge
+                  variant="outline"
+                  className="glass-chip w-fit px-3.5 py-1 text-[11px] font-semibold tracking-[0.2em] text-foreground/75"
+                >
                   Android satellite
                 </Badge>
                 <CardTitle className="text-2xl font-semibold tracking-tight">
-                  Phone memory for the Oracle Mac.
+                  Phone memory for the Oracle Mac
                 </CardTitle>
-                <CardDescription className="text-sm">
+                <CardDescription className="max-w-[28rem] text-sm leading-6">
                   Pair this device, keep lightweight event memory on, and sync handoffs back to the main machine.
                 </CardDescription>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
+              <div className="glass-chip flex h-11 w-11 shrink-0 items-center justify-center p-0 text-primary shadow-none">
                 <Smartphone className="h-5 w-5" />
               </div>
             </div>
-            <div className="grid gap-3 rounded-3xl border border-border/60 bg-muted/20 p-4">
+            <div className="glass-toolbar grid gap-3 p-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">device</span>
-                <span className="text-sm font-medium">
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                  device
+                </span>
+                <span className="text-sm font-semibold text-foreground/90">
                   {pairingState.deviceName ?? defaultPairingState.deviceName}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">device id</span>
-                <span className="font-mono text-xs">
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                  device id
+                </span>
+                <span className="text-[11px] font-medium tracking-[0.18em] text-foreground/80">
                   {pairingState.deviceId ?? defaultPairingState.deviceId}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">oracle</span>
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                  oracle
+                </span>
                 <Badge variant={pairingState.paired ? "default" : "outline"}>
                   {pairingState.paired ? pairingState.oracleDeviceName ?? "paired" : "not paired"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">live device memory</span>
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                  live device memory
+                </span>
                 <Badge variant={pairingState.liveCaptureEnabled ? "default" : "outline"}>
                   {pairingState.liveCaptureEnabled ? "live memory on" : "live memory off"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-muted-foreground">last sync</span>
-                <span className="text-sm font-medium">{formatTimestamp(pairingState.lastSyncAt)}</span>
+                <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
+                  last sync
+                </span>
+                <span className="text-sm font-semibold text-foreground/90">
+                  {formatTimestamp(pairingState.lastSyncAt)}
+                </span>
               </div>
             </div>
           </CardHeader>
@@ -332,7 +339,12 @@ export function AndroidSatelliteScreen() {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="oracle-pair-payload">oracle pair payload</Label>
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={loadState}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="glass-chip h-8 px-3 text-xs font-medium text-foreground/75 hover:text-foreground"
+                  onClick={loadState}
+                >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   refresh
                 </Button>
@@ -349,13 +361,18 @@ export function AndroidSatelliteScreen() {
                   {isPairing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   pair android device
                 </Button>
-                <Button variant="outline" onClick={handleSyncNow} disabled={isSyncing || !pairingState.paired}>
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={handleSyncNow}
+                  disabled={isSyncing || !pairingState.paired}
+                >
                   {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   sync now
                 </Button>
               </div>
               {pairingState.serverUrl ? (
-                <p className="text-xs text-muted-foreground">{pairingState.serverUrl}</p>
+                <p className="text-xs text-muted-foreground/90">{pairingState.serverUrl}</p>
               ) : null}
             </div>
 
@@ -392,7 +409,9 @@ export function AndroidSatelliteScreen() {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
+                <div className="glass-chip flex h-8 w-8 items-center justify-center p-0 text-primary shadow-none">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
                 <p className="text-sm font-medium">Permissions</p>
               </div>
               <div className="grid gap-2">
@@ -449,7 +468,7 @@ export function AndroidSatelliteScreen() {
                   recentEvents.map((event) => (
                     <div
                       key={event.eventId}
-                      className="rounded-2xl border border-border/60 bg-muted/25 px-4 py-3"
+                      className="glass-chip px-4 py-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -457,7 +476,7 @@ export function AndroidSatelliteScreen() {
                           {event.detail ? (
                             <p className="mt-1 text-sm text-muted-foreground">{event.detail}</p>
                           ) : null}
-                          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/80">
                             {event.appName ?? "android satellite"}
                           </p>
                         </div>
@@ -474,7 +493,7 @@ export function AndroidSatelliteScreen() {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                  <div className="glass-chip border-dashed px-4 py-6 text-sm text-muted-foreground">
                     No device events yet. Pair the Oracle Mac first, then enable live memory.
                   </div>
                 )}
@@ -482,24 +501,28 @@ export function AndroidSatelliteScreen() {
             </div>
 
             {statusMessage ? (
-              <div className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+              <div className="glass-toolbar px-4 py-3 text-sm">
                 {statusMessage}
               </div>
             ) : null}
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-background/90 shadow-sm">
+        <Card className="shadow-[0_24px_64px_-46px_rgba(18,47,86,0.45)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Xiaomi 15 Ultra setup</CardTitle>
             <CardDescription>
               Keep the app alive under HyperOS so capture and sync survive backgrounding.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2 text-sm text-muted-foreground">
-            <p>1. Battery: set the app to No restrictions.</p>
-            <p>2. Permissions: grant notification access and usage access.</p>
-            <p>3. Autostart: allow the app to relaunch after reboot.</p>
+          <CardContent className="grid gap-2 text-sm leading-6 text-muted-foreground">
+            <div className="glass-chip px-4 py-3">1. Battery: set the app to No restrictions.</div>
+            <div className="glass-chip px-4 py-3">
+              2. Permissions: grant notification access and usage access.
+            </div>
+            <div className="glass-chip px-4 py-3">
+              3. Autostart: allow the app to relaunch after reboot.
+            </div>
           </CardContent>
         </Card>
       </div>

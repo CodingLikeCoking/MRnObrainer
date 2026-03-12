@@ -130,6 +130,32 @@ pub fn run_on_main_thread_safe<F: FnOnce() + Send + 'static>(app: &AppHandle, f:
     });
 }
 
+#[cfg(target_os = "macos")]
+unsafe fn apply_macos_glass_titlebar(
+    ns_window: tauri_nspanel::cocoa::base::id,
+    movable_by_background: bool,
+) {
+    use objc::{class, msg_send, sel, sel_impl};
+    use tauri_nspanel::cocoa::base::nil;
+
+    if ns_window == nil {
+        return;
+    }
+
+    // Let the webview content extend into the titlebar region so the shared
+    // CSS glass surface can provide the visual treatment while AppKit keeps
+    // native controls and drag behavior.
+    let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: true];
+    let _: () = msg_send![ns_window, setTitleVisibility: 1i64];
+    let _: () = msg_send![ns_window, setOpaque: false];
+    let clear: tauri_nspanel::cocoa::base::id = msg_send![class!(NSColor), clearColor];
+    let _: () = msg_send![ns_window, setBackgroundColor: clear];
+    let _: () = msg_send![
+        ns_window,
+        setMovableByWindowBackground: movable_by_background
+    ];
+}
+
 use crate::{
     store::{OnboardingStore, SettingsStore},
     ServerState,
@@ -673,6 +699,13 @@ impl ShowRewindWindow {
                 .min_inner_size(min.0, min.1);
         }
 
+        #[cfg(target_os = "macos")]
+        {
+            builder = builder
+                .hidden_title(true)
+                .title_bar_style(tauri::TitleBarStyle::Overlay);
+        }
+
         builder
     }
 
@@ -762,6 +795,9 @@ impl ShowRewindWindow {
                         use objc::{msg_send, sel, sel_impl};
                         use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
                         use tauri_nspanel::cocoa::base::id;
+                        unsafe {
+                            apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
+                        }
                         panel.set_level(1001);
                         panel.set_collection_behaviour(
                             NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
@@ -1183,6 +1219,12 @@ impl ShowRewindWindow {
                                 use tauri_nspanel::cocoa::base::id;
 
                                 if let Ok(panel) = window_clone.to_panel() {
+                                    unsafe {
+                                        apply_macos_glass_titlebar(
+                                            (&*panel) as *const _ as _,
+                                            false,
+                                        );
+                                    }
                                     // Same level as overlay — above fullscreen
                                     panel.set_level(1001);
                                     panel.released_when_closed(true);

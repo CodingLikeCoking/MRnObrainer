@@ -122,7 +122,7 @@ export default function ShortcutReminderPage() {
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center"
+      className="flex h-full w-full items-center justify-center p-2"
       style={{ background: "transparent" }}
     >
       <div
@@ -131,11 +131,10 @@ export default function ShortcutReminderPage() {
         style={{ cursor: "grab" }}
       >
         <div
-          className="grid border border-white/20"
+          className="glass-toolbar grid overflow-hidden rounded-[22px] border border-white/40 shadow-[0_24px_60px_rgba(15,23,42,0.24)]"
           style={{
-            background: "rgba(0, 0, 0, 0.75)",
             gridTemplateColumns: "1fr 1fr auto",
-            maxWidth: 160,
+            maxWidth: 176,
           }}
         >
           {/* Row 1, Col 1: Overlay shortcut (clickable) */}
@@ -146,7 +145,7 @@ export default function ShortcutReminderPage() {
               posthog.capture("shortcut_reminder_timeline_clicked");
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 px-1.5 py-1 border-r border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+            className="flex cursor-pointer items-center gap-1 border-r border-white/30 px-2 py-1.5 transition-colors hover:bg-white/20"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title="Open MRnObrainer dashboard"
           >
@@ -157,12 +156,12 @@ export default function ShortcutReminderPage() {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="text-white/50"
+              className="text-foreground/45"
             >
               <rect x="3" y="3" width="18" height="18" />
               <line x1="3" y1="9" x2="21" y2="9" />
             </svg>
-            <span className="font-mono text-[9px] font-medium text-white/80 tracking-wider">
+            <span className="text-[10px] font-semibold tracking-[0.16em] text-foreground/80">
               {overlayShortcut ?? "..."}
             </span>
           </button>
@@ -175,7 +174,7 @@ export default function ShortcutReminderPage() {
               posthog.capture("shortcut_reminder_chat_clicked");
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 px-1.5 py-1 hover:bg-white/10 transition-colors cursor-pointer"
+            className="flex cursor-pointer items-center gap-1 px-2 py-1.5 transition-colors hover:bg-white/20"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title="Open MRnObrainer assistant"
           >
@@ -186,11 +185,11 @@ export default function ShortcutReminderPage() {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="text-white/50"
+              className="text-foreground/45"
             >
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
             </svg>
-            <span className="font-mono text-[9px] font-medium text-white/80 tracking-wider">
+            <span className="text-[10px] font-semibold tracking-[0.16em] text-foreground/80">
               {chatShortcut ?? "..."}
             </span>
           </button>
@@ -202,38 +201,40 @@ export default function ShortcutReminderPage() {
               e.preventDefault();
               e.stopPropagation();
             }}
-            className="flex items-center justify-center border-l border-white/20 px-1.5 py-1 hover:bg-white/10 transition-colors cursor-pointer"
+            className="flex cursor-pointer items-center justify-center border-l border-white/30 px-2 py-1.5 transition-colors hover:bg-white/20"
             title="Hide MRnObrainer shortcut reminder"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            <X className="h-2.5 w-2.5 text-white/50 hover:text-white" />
+            <X className="h-3 w-3 text-foreground/45 transition-colors hover:text-foreground" />
           </button>
 
           {/* Row 2, Col 1: Audio animation */}
-          <div className="border-t border-white/10 py-1 min-w-0 overflow-hidden">
+          <div className="min-w-0 overflow-hidden border-t border-white/20 py-1.5">
             <AudioEqualizer
               active={overlayData.audioActive}
               speechRatio={overlayData.speechRatio}
+              variant="light"
             />
           </div>
 
           {/* Row 2, Col 2: Screen animation */}
-          <div className="border-t border-l border-white/10 py-1 min-w-0 overflow-hidden">
+          <div className="min-w-0 overflow-hidden border-l border-t border-white/20 py-1.5">
             <ScreenMatrix
               active={overlayData.screenActive}
               captureFps={overlayData.captureFps}
               ocrPulseTimestamp={overlayData.ocrPulseTimestamp}
+              variant="light"
             />
           </div>
 
           {/* Row 2, Col 3: Pipe icon */}
-          <div className="flex items-center justify-center border-t border-white/10 border-l border-white/20 px-1.5 py-1">
+          <div className="flex items-center justify-center border-l border-t border-white/30 px-2 py-1.5">
             <svg
               width="10"
               height="10"
               viewBox="5 4 14 16"
               fill="none"
-              className="text-white/60"
+              className="text-foreground/60"
             >
               <path
                 d="M14.77,12.19h-5.55c0,.81-.63,1.46-1.41,1.46h-1.71c-.1,0-.17-.08-.17-.17v-.46h-.54v6.98h.54v-.39c0-.1.08-.17.17-.17h1.71c3.84,0,6.96-3.25,6.96-7.24h0Z"

@@ -133,21 +133,30 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="w-6 h-6 border border-foreground border-t-transparent rounded-full animate-spin" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="glass-toolbar flex h-12 w-12 items-center justify-center rounded-full shadow-glass">
+          <div className="h-6 w-6 animate-spin rounded-full border border-foreground/40 border-t-transparent" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden bg-background">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-transparent">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        <div className="absolute inset-x-10 top-0 h-44 rounded-full bg-[radial-gradient(circle,_rgba(56,189,248,0.22)_0%,_rgba(56,189,248,0)_72%)] blur-3xl" />
+        <div className="absolute -right-20 top-28 h-64 w-64 rounded-full bg-[radial-gradient(circle,_rgba(14,165,233,0.16)_0%,_rgba(14,165,233,0)_72%)] blur-3xl" />
+      </div>
       {/* Drag region */}
-      <div className="w-full bg-background p-3" data-tauri-drag-region />
+      <div className="relative z-10 w-full bg-transparent p-3" data-tauri-drag-region />
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+      <div className="relative z-10 flex flex-1 items-center justify-center overflow-auto p-6">
         <div
-          className={`w-full max-w-lg mx-auto transition-opacity duration-300 ${
+          className={`mx-auto w-full max-w-lg transition-opacity duration-300 ${
             isVisible ? "opacity-100" : "opacity-0"
           }`}
         >

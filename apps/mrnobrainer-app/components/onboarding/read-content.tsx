@@ -75,17 +75,17 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
   return (
     <div className="flex flex-col items-center justify-center space-y-8 py-4">
       <motion.div
-        className="flex items-center space-x-2"
+        className="glass-chip flex items-center space-x-2 px-3 py-1.5"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
         <motion.div
-          className="h-2 w-2 bg-foreground"
+          className="h-2 w-2 rounded-full bg-primary"
           animate={{ opacity: [1, 0.3, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
         />
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           timeline check · {seconds}s
           {framesDetected > 0 && ` · ${framesDetected} checks`}
         </span>
@@ -98,10 +98,10 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
         transition={{ delay: 0.2, duration: 0.5 }}
       >
         <div className="space-y-2 text-center">
-          <h2 className="font-sans text-lg font-bold lowercase">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
             getting your timeline ready
           </h2>
-          <p className="font-mono text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-7 text-muted-foreground">
             we&apos;re checking that your recent activity is showing up on this Mac.
             <br />
             once it is ready, you&apos;ll move to the final step and open the dashboard.
@@ -110,16 +110,16 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
           </p>
         </div>
 
-        <div className="w-full space-y-3 rounded-2xl border border-border p-4">
+        <div className="glass-panel w-full space-y-3 p-4">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               {verification.statusLabel}
             </span>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
               {framesDetected > 0 ? `${framesDetected} checks` : "checking on this Mac"}
             </span>
           </div>
-          <p className="font-mono text-xs text-muted-foreground">
+          <p className="text-sm leading-6 text-muted-foreground">
             {verification.detailLabel}
           </p>
         </div>
@@ -127,10 +127,10 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
         <button
           onClick={handleContinue}
           disabled={!verification.canContinue}
-          className={`w-full border py-3 font-mono text-sm uppercase tracking-widest transition-colors duration-150 ${
+          className={`w-full rounded-full border px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] transition-all duration-150 ${
             verification.canContinue
-              ? "border-foreground bg-foreground text-background hover:bg-background hover:text-foreground"
-              : "cursor-not-allowed border-border text-muted-foreground"
+              ? "border-transparent bg-primary text-primary-foreground shadow-glass-strong hover:bg-primary/90"
+              : "glass-toolbar cursor-not-allowed text-muted-foreground"
           }`}
         >
           Continue
@@ -145,9 +145,9 @@ export default function ReadContent({ handleNextSlide }: ReadContentProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleContinue}
-              className="font-mono text-xs text-muted-foreground/40 transition-colors hover:text-muted-foreground"
+              className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
             >
-              skip →
+              skip
             </motion.button>
           )}
         </AnimatePresence>

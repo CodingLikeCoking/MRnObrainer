@@ -19,13 +19,13 @@ export function WorkersPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 pb-12">
-      <section className="rounded-3xl border border-border/60 bg-background/95 p-6">
+      <section className="glass-panel rounded-[32px] p-6 shadow-glass">
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl border border-border/60 bg-muted/20 p-3">
+          <div className="glass-chip p-3">
             <Server className="h-5 w-5 text-foreground" />
           </div>
           <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
               Workers
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -40,7 +40,7 @@ export function WorkersPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border/60 bg-muted/20 p-5">
+      <section className="glass-panel rounded-[28px] p-5">
         <div className="flex items-start gap-3">
           <Waypoints className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">

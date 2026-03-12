@@ -35,9 +35,11 @@ export default function TourStep({ handleNextSlide }: TourStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
-          First useful result
-        </p>
+        <div className="flex justify-center">
+          <p className="glass-chip px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+            First useful result
+          </p>
+        </div>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">
           One local loop, then expand
         </h2>
@@ -51,9 +53,9 @@ export default function TourStep({ handleNextSlide }: TourStepProps) {
         {TOUR_ITEMS.map((item, index) => (
           <div
             key={item.title}
-            className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/10 p-4"
+            className="glass-panel flex items-start gap-3 p-4"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-border font-mono text-xs text-muted-foreground">
+            <div className="glass-chip flex h-9 w-9 items-center justify-center p-0 text-[11px] font-semibold text-muted-foreground shadow-none">
               {index + 1}
             </div>
             <div>
@@ -66,7 +68,7 @@ export default function TourStep({ handleNextSlide }: TourStepProps) {
 
       <button
         onClick={handleNextSlide}
-        className="w-full border border-foreground bg-foreground py-3 font-mono text-sm uppercase tracking-[0.18em] text-background transition-colors hover:bg-background hover:text-foreground"
+        className="w-full rounded-full border border-transparent bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-primary-foreground shadow-glass-strong transition-all hover:bg-primary/90"
       >
         Continue
       </button>

@@ -9,18 +9,8 @@ export default function ShortcutReminderLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      style={{
-        background: "transparent",
-        margin: 0,
-        padding: 0,
-        overflow: "hidden",
-        minHeight: "100%",
-        width: "100%",
-      }}
-    >
+    <div className="min-h-full w-full overflow-hidden bg-transparent font-sans">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap');
         html, body, #__next, main {
           background: transparent !important;
           background-color: transparent !important;
@@ -29,9 +19,6 @@ export default function ShortcutReminderLayout({
           overflow: hidden;
           min-height: 100%;
           width: 100%;
-        }
-        body {
-          font-family: "IBM Plex Mono", monospace;
         }
       `}</style>
       {children}

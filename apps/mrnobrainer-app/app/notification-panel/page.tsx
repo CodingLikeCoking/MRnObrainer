@@ -30,6 +30,10 @@ export default function NotificationPanelPage() {
   const [progress, setProgress] = useState(100);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDismissMsRef = useRef(20000);
+  const primaryActionBackground = "hsl(var(--primary) / 0.16)";
+  const secondaryActionBackground = "hsl(var(--background) / 0.14)";
+  const hoverActionBackground = "hsl(var(--primary) / 0.22)";
+  const dismissColor = "hsl(var(--muted-foreground) / 0.72)";
 
   const hide = useCallback(
     async (auto: boolean) => {
@@ -131,23 +135,27 @@ export default function NotificationPanelPage() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", background: "transparent" }}>
+    <div style={{ width: "100%", height: "100%", background: "transparent", padding: "8px" }}>
       <div
         style={{
-          background: "rgba(255, 255, 255, 0.92)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid rgba(0, 0, 0, 0.08)",
+          background:
+            "linear-gradient(180deg, hsl(var(--glass-modal-top) / 0.95) 0%, hsl(var(--glass-modal-bottom) / 0.9) 100%)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          border: "1px solid hsl(var(--glass-edge-strong) / 0.88)",
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          fontFamily: '"IBM Plex Mono", monospace',
-          color: "rgba(0, 0, 0, 0.8)",
+          fontFamily:
+            "ui-sans-serif, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', sans-serif",
+          color: "hsl(var(--foreground) / 0.88)",
           overflow: "hidden",
           position: "relative",
           animation: "slideIn 0.3s ease-out",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+          borderRadius: "28px",
+          boxShadow:
+            "0 24px 64px -40px rgba(17, 48, 89, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5)",
         }}
       >
         <style>{`
@@ -175,31 +183,32 @@ export default function NotificationPanelPage() {
           <span
             style={{
               fontSize: "10px",
-              fontWeight: 500,
-              letterSpacing: "0.05em",
-              color: "rgba(0, 0, 0, 0.4)",
-              textTransform: "lowercase",
+              fontWeight: 600,
+              letterSpacing: "0.18em",
+              color: "hsl(var(--muted-foreground) / 0.72)",
             }}
           >
-            mrnobrainer
+            MRnObrainer
           </span>
           <button
             onClick={() => hide(false)}
             style={{
-              background: "none",
-              border: "none",
-              color: "rgba(0, 0, 0, 0.35)",
+              background: "hsl(var(--background) / 0.12)",
+              border: "1px solid hsl(var(--glass-edge) / 0.9)",
+              color: "hsl(var(--muted-foreground) / 0.78)",
               cursor: "pointer",
-              padding: "2px",
-              fontSize: "14px",
+              padding: "4px 8px",
+              fontSize: "13px",
               lineHeight: 1,
-              fontFamily: '"IBM Plex Mono", monospace',
+              borderRadius: "999px",
+              fontFamily:
+                "ui-sans-serif, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', sans-serif",
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "rgba(0, 0, 0, 0.7)")
+              (e.currentTarget.style.color = "hsl(var(--foreground) / 0.92)")
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "rgba(0, 0, 0, 0.35)")
+              (e.currentTarget.style.color = "hsl(var(--muted-foreground) / 0.78)")
             }
           >
             ✕
@@ -211,9 +220,9 @@ export default function NotificationPanelPage() {
           <div
             style={{
               fontSize: "12px",
-              fontWeight: 500,
-              marginBottom: "4px",
-              color: "rgba(0, 0, 0, 0.9)",
+              fontWeight: 600,
+              marginBottom: "6px",
+              color: "hsl(var(--foreground) / 0.94)",
             }}
           >
             {payload.title}
@@ -221,8 +230,8 @@ export default function NotificationPanelPage() {
           <div
             style={{
               fontSize: "11px",
-              lineHeight: "1.4",
-              color: "rgba(0, 0, 0, 0.5)",
+              lineHeight: "1.55",
+              color: "hsl(var(--muted-foreground) / 0.9)",
             }}
           >
             {payload.body}
@@ -244,47 +253,61 @@ export default function NotificationPanelPage() {
               onClick={() => handleAction(action.action)}
               style={{
                 background: action.primary
-                  ? "rgba(0, 0, 0, 0.06)"
-                  : "none",
-                border: "1px solid rgba(0, 0, 0, 0.12)",
-                color: "rgba(0, 0, 0, 0.75)",
+                  ? primaryActionBackground
+                  : secondaryActionBackground,
+                border: "1px solid hsl(var(--glass-edge-strong) / 0.82)",
+                color: action.primary
+                  ? "hsl(var(--foreground) / 0.95)"
+                  : "hsl(var(--foreground) / 0.82)",
                 cursor: "pointer",
-                padding: "4px 10px",
+                padding: "7px 12px",
                 fontSize: "10px",
-                fontFamily: '"IBM Plex Mono", monospace',
-                fontWeight: 500,
-                letterSpacing: "0.03em",
+                fontFamily:
+                  "ui-sans-serif, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', sans-serif",
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                borderRadius: "999px",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(0, 0, 0, 0.08)")
+                (e.currentTarget.style.background = hoverActionBackground)
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = action.primary
-                  ? "rgba(0, 0, 0, 0.06)"
-                  : "none")
+                  ? primaryActionBackground
+                  : secondaryActionBackground)
               }
             >
               {action.label}
             </button>
           ))}
-          <span
+          <button
+            type="button"
             onClick={() => hide(false)}
             style={{
               marginLeft: "auto",
               fontSize: "10px",
-              color: "rgba(0, 0, 0, 0.3)",
+              color: dismissColor,
               cursor: "pointer",
-              fontFamily: '"IBM Plex Mono", monospace',
+              background: "transparent",
+              border: "none",
+              fontFamily:
+                "ui-sans-serif, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', sans-serif",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
             }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "rgba(0, 0, 0, 0.6)")
+              (e.currentTarget.style.color = "hsl(var(--foreground) / 0.86)")
             }
             onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "rgba(0, 0, 0, 0.3)")
+              (e.currentTarget.style.color = dismissColor)
             }
           >
-            dismiss →
-          </span>
+            dismiss
+          </button>
         </div>
 
         {/* Progress bar */}
@@ -295,14 +318,15 @@ export default function NotificationPanelPage() {
             left: 0,
             right: 0,
             height: "2px",
-            background: "rgba(0, 0, 0, 0.05)",
+            background: "hsl(var(--background) / 0.22)",
           }}
         >
           <div
             style={{
               height: "100%",
               width: `${progress}%`,
-              background: "rgba(0, 0, 0, 0.2)",
+              background:
+                "linear-gradient(90deg, hsl(var(--primary) / 0.72) 0%, hsl(var(--primary) / 0.3) 100%)",
               transition: "width 50ms linear",
             }}
           />
