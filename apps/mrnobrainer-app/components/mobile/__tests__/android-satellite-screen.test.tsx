@@ -153,8 +153,8 @@ describe("AndroidSatelliteScreen", () => {
           oracleDeviceName: "MacBook Air Oracle",
           oracleDeviceId: "macbook-air-oracle",
           serverUrl: "http://192.168.1.8:3030",
-          deviceId: "xiaomi-15-ultra",
-          deviceName: "Xiaomi 15 Ultra",
+          deviceId: "android-7d7e32f0d73a4e0e8d63b91a6f3a3b90",
+          deviceName: "Android Satellite",
           liveCaptureEnabled: true,
           lastSyncAt: "2026-03-12T09:15:00.000Z",
         };
@@ -173,11 +173,11 @@ describe("AndroidSatelliteScreen", () => {
           {
             eventId: "evt-queued",
             kind: "notification_received",
-            title: "New Gmail notification",
+            title: "New notification received",
             detail: "Alice replied from mobile.",
             occurredAt: "2026-03-12T09:16:00.000Z",
-            synced: false,
             appName: "Gmail",
+            synced: false,
           },
           {
             eventId: "evt-sent",
@@ -185,8 +185,8 @@ describe("AndroidSatelliteScreen", () => {
             title: "Manual note captured",
             detail: "Handle from desktop later.",
             occurredAt: "2026-03-12T09:14:00.000Z",
-            synced: true,
             appName: "MRnObrainer Android",
+            synced: true,
           },
         ];
       }
@@ -204,11 +204,13 @@ describe("AndroidSatelliteScreen", () => {
 
     render(<AndroidSatelliteScreen />);
 
-    expect(await screen.findByText("Xiaomi 15 Ultra")).toBeInTheDocument();
+    expect(await screen.findByText("Android Satellite")).toBeInTheDocument();
     expect(screen.getByText("1 queued")).toBeInTheDocument();
     expect(screen.getByText("1 sent")).toBeInTheDocument();
     expect(screen.getByText("queued")).toBeInTheDocument();
     expect(screen.getByText("sent")).toBeInTheDocument();
+    expect(screen.getByText("Gmail")).toBeInTheDocument();
+    expect(screen.getByText("MRnObrainer Android")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
 

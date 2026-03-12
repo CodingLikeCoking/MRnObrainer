@@ -25,8 +25,8 @@ describe("AndroidSatelliteHome", () => {
           serverUrl: "http://oracle.local:3030",
           oracleDeviceId: "oracle-air",
           oracleDeviceName: "MacBook Air",
-          deviceId: "xiaomi-15-ultra",
-          deviceName: "Xiaomi 15 Ultra",
+          deviceId: "android-7d7e32f0d73a4e0e8d63b91a6f3a3b90",
+          deviceName: "Android Satellite",
           lastSyncAt: null,
           liveCaptureEnabled: true,
         };
@@ -58,7 +58,7 @@ describe("AndroidSatelliteHome", () => {
 
     render(<AndroidSatelliteHome />);
 
-    expect(await screen.findByText(/xiaomi-15-ultra/i)).toBeInTheDocument();
+    expect(await screen.findByText(/android-[a-f0-9]{32}/i)).toBeInTheDocument();
     expect(screen.getByText(/Phone memory for the Oracle Mac/i)).toBeInTheDocument();
     expect(screen.getByText(/read in gmail, reply on mac/i)).toBeInTheDocument();
   });

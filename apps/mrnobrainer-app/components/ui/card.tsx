@@ -9,8 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Screenpipe Brand: 1px border, sharp corners, no shadow
-      "border border-border bg-card text-card-foreground",
+      "glass-panel rounded-[calc(var(--radius)+0.35rem)] text-card-foreground",
       className
     )}
     {...props}
@@ -37,8 +36,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      // Screenpipe Brand: Monospace, lowercase
-      "text-xl font-mono font-medium leading-none tracking-tight lowercase",
+      "text-xl font-semibold leading-none tracking-tight text-text-primary",
       className
     )}
     {...props}

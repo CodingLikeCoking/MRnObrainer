@@ -27,13 +27,19 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 const SYSTEM_THEME: ColorTheme = "system";
 
+function resolveSystemTheme() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "screenpipe-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<ColorTheme | undefined>(undefined);
+  const [theme, setThemeState] = useState<ColorTheme | undefined>(undefined);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const persistTheme = (nextTheme: ColorTheme) => {
@@ -48,9 +54,9 @@ export function ThemeProvider({
       if (storedTheme && storedTheme !== SYSTEM_THEME) {
         persistTheme(SYSTEM_THEME);
       }
-      setTheme(SYSTEM_THEME);
+      setThemeState(SYSTEM_THEME);
     } catch {
-      setTheme(SYSTEM_THEME);
+      setThemeState(SYSTEM_THEME);
     }
     setIsLoaded(true);
   }, [storageKey]);
@@ -59,40 +65,30 @@ export function ThemeProvider({
     if (!theme || !isLoaded) return;
 
     const root = window.document.documentElement;
-
-    // Remove all theme classes first
     root.classList.remove("light", "dark");
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyTheme = () => {
-      const actualTheme = mediaQuery.matches ? "dark" : "light";
+    const applyResolvedTheme = () => {
       root.classList.remove("light", "dark");
-      root.classList.add(actualTheme);
+      root.classList.add(resolveSystemTheme());
     };
 
-    applyTheme();
-
-    const handleSystemThemeChange = () => {
-      if (theme === SYSTEM_THEME) {
-        applyTheme();
-      }
-    };
-
+    applyResolvedTheme();
     if (theme === SYSTEM_THEME) {
-      mediaQuery.addEventListener("change", handleSystemThemeChange);
-      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+      mediaQuery.addEventListener("change", applyResolvedTheme);
+      return () => mediaQuery.removeEventListener("change", applyResolvedTheme);
     }
   }, [theme, isLoaded]);
 
   const value = {
-    theme: theme || defaultTheme,
+    theme: theme || defaultTheme || SYSTEM_THEME,
     setTheme: (_theme: ColorTheme) => {
       persistTheme(SYSTEM_THEME);
-      setTheme(SYSTEM_THEME);
+      setThemeState(SYSTEM_THEME);
     },
     toggleTheme: () => {
       persistTheme(SYSTEM_THEME);
-      setTheme(SYSTEM_THEME);
+      setThemeState(SYSTEM_THEME);
     },
   };
 

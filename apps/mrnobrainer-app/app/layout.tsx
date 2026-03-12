@@ -1,5 +1,4 @@
 "use client";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,8 +8,6 @@ import { ShortcutTracker } from "@/components/shortcut-reminder";
 import { PipeInstallDialog } from "@/components/pipe-install-dialog";
 import { usePathname } from "next/navigation";
 import { type as getOsType } from "@tauri-apps/plugin-os";
-
-const inter = Inter({ subsets: ["latin"] });
 
 // Debounced localStorage writer
 const createDebouncer = (wait: number) => {
@@ -195,10 +192,12 @@ export default function RootLayout({
               (function() {
                 try {
                   var theme = localStorage.getItem('screenpipe-ui-theme');
-                  if (!theme) {
-                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  if (theme === 'light' || theme === 'dark') {
+                    localStorage.setItem('screenpipe-ui-theme', 'system');
+                    theme = 'system';
                   }
-                  document.documentElement.classList.add(theme);
+                  var resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  document.documentElement.classList.add(resolvedTheme);
                 } catch (e) {
                   document.documentElement.classList.add('light');
                 }
@@ -208,7 +207,7 @@ export default function RootLayout({
         />
       </head>
       <Providers>
-        <body className={`${inter.className} scrollbar-hide`}>
+        <body className="scrollbar-hide font-sans">
           {showDesktopChrome && <DeeplinkHandler />}
           {showDesktopChrome && <ShortcutTracker />}
           {showDesktopChrome && <PipeInstallDialog />}

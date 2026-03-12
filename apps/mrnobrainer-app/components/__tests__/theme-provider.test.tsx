@@ -9,8 +9,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 
-const storage = new Map<string, string>();
-
 function ThemeProbe() {
   const { theme, setTheme } = useTheme();
 
@@ -41,21 +39,36 @@ function mockMatchMedia(matches: boolean) {
   });
 }
 
+function installLocalStorageMock() {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+  };
+
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
+
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    storage.clear();
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      value: {
-        getItem: (key: string) => storage.get(key) ?? null,
-        setItem: (key: string, value: string) => {
-          storage.set(key, value);
-        },
-        removeItem: (key: string) => {
-          storage.delete(key);
-        },
-      },
-    });
+    installLocalStorageMock();
+    localStorage.clear();
     document.documentElement.className = "";
   });
 

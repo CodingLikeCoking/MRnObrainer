@@ -2,10 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/lib/hooks/use-settings";
-import { useTheme } from "@/components/theme-provider";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Rocket, Moon, Sun, Monitor, FlaskConical, Shield, ExternalLink, Layers, RefreshCw, Undo2, MessageSquare, Cloud, HardDrive, Lock, Bot } from "lucide-react";
+import { Rocket, FlaskConical, Shield, ExternalLink, Layers, RefreshCw, Undo2, MessageSquare, Cloud, HardDrive, Lock, Bot } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ import {
 export default function GeneralSettings() {
   const isEnterprise = useIsEnterpriseBuild();
   const { settings, updateSettings } = useSettings();
-  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { diskUsage } = useDiskUsage();
   const { pipes } = usePipes();
@@ -90,27 +88,6 @@ export default function GeneralSettings() {
       updateSettings(newSettings);
     }
   };
-
-  const themeOptions = [
-    {
-      value: "system" as const,
-      label: "System",
-      description: "Use system preference",
-      icon: Monitor,
-    },
-    {
-      value: "light" as const,
-      label: "Light",
-      description: "Light theme",
-      icon: Sun,
-    },
-    {
-      value: "dark" as const,
-      label: "Dark",
-      description: "Dark theme",
-      icon: Moon,
-    },
-  ];
 
   const fetchVersions = async () => {
     if (availableVersions.length > 0) {
@@ -426,52 +403,6 @@ export default function GeneralSettings() {
             </CardContent>
           </Card>
         )}
-
-        <Card className="border-border bg-card">
-          <CardContent className="px-3 py-2.5">
-            <div className="space-y-2.5">
-              <div className="flex items-center space-x-2.5">
-                <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                <h3 className="text-sm font-medium text-foreground">Theme</h3>
-              </div>
-              <div className="flex gap-3 ml-[26px]">
-                {themeOptions.map((option) => {
-                  const IconComponent = option.icon;
-                  return (
-                    <label
-                      key={option.value}
-                      className="flex items-center space-x-2 cursor-pointer group"
-                    >
-                      <input
-                        type="radio"
-                        name="theme"
-                        value={option.value}
-                        checked={theme === option.value}
-                        onChange={() => setTheme(option.value)}
-                        className="sr-only"
-                      />
-                      <div className={`
-                        flex items-center justify-center w-3.5 h-3.5 rounded-full border-2 transition-colors
-                        ${theme === option.value 
-                          ? 'border-primary bg-primary' 
-                          : 'border-muted-foreground group-hover:border-primary'
-                        }
-                      `}>
-                        {theme === option.value && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-1.5">
-                        <IconComponent className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm text-foreground">{option.label}</span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">

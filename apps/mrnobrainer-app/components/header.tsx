@@ -4,7 +4,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import HealthStatus from "@/components/screenpipe-status";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 import React from "react";
 import {

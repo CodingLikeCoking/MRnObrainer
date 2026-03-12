@@ -111,7 +111,7 @@ export const Providers = forwardRef<
 
   return (
     <NuqsAdapter>
-      <ThemeProvider defaultTheme="light" storageKey="screenpipe-ui-theme">
+      <ThemeProvider defaultTheme="system" storageKey="screenpipe-ui-theme">
         {isMobileRuntime ? (
           <SettingsProvider>
             <ChangelogDialogProvider>

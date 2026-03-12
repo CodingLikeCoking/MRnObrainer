@@ -18,9 +18,16 @@ module.exports = {
 	  },
 	  extend: {
 		fontFamily: {
-		  /* Screenpipe Brand: Monospace primary */
-		  sans: ["JetBrains Mono", "SF Mono", "IBM Plex Mono", "ui-monospace", "monospace"],
-		  mono: ["JetBrains Mono", "SF Mono", "IBM Plex Mono", "ui-monospace", "monospace"],
+		  sans: [
+			"ui-sans-serif",
+			"-apple-system",
+			"BlinkMacSystemFont",
+			"SF Pro Text",
+			"SF Pro Display",
+			"Segoe UI",
+			"sans-serif",
+		  ],
+		  mono: ["SFMono-Regular", "JetBrains Mono", "ui-monospace", "monospace"],
 		},
 		colors: {
 		  // Base colors
@@ -150,6 +157,10 @@ module.exports = {
 		  lg: "var(--radius)",
 		  md: "calc(var(--radius) - 2px)",
 		  sm: "calc(var(--radius) - 4px)",
+		},
+		boxShadow: {
+		  glass: "var(--glass-shadow-soft)",
+		  "glass-strong": "var(--glass-shadow)",
 		},
 		keyframes: {
 		  blink: {
