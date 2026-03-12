@@ -6,10 +6,11 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
+use tauri::{App, AppHandle, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 const MOBILE_STATE_FILE: &str = "android-satellite-state.json";
 const MAX_RECENT_EVENTS: usize = 50;
+const MOBILE_MAIN_WINDOW_LABEL: &str = "main";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -248,6 +249,10 @@ pub fn create_user_note(app: AppHandle, text: String) -> Result<Vec<RecentEvent>
 
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            ensure_mobile_main_window(app)?;
+            Ok(())
+        })
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             get_pairing_state,
@@ -260,4 +265,40 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Android satellite app");
+}
+
+fn ensure_mobile_main_window<R: Runtime>(app: &mut App<R>) -> tauri::Result<()> {
+    if app.get_webview_window(MOBILE_MAIN_WINDOW_LABEL).is_some() {
+        return Ok(());
+    }
+
+    WebviewWindowBuilder::new(
+        app,
+        MOBILE_MAIN_WINDOW_LABEL,
+        WebviewUrl::App("index.html".into()),
+    )
+    .build()?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tauri::test::{mock_builder, mock_context, noop_assets};
+
+    #[test]
+    fn mobile_setup_creates_a_main_window() {
+        let mut app = mock_builder()
+            .build(mock_context(noop_assets()))
+            .expect("mobile app should build in tests");
+
+        ensure_mobile_main_window(&mut app)
+            .expect("mobile app should create its startup webview");
+
+        assert!(
+            app.get_webview_window(MOBILE_MAIN_WINDOW_LABEL).is_some(),
+            "Android startup should create an initial webview window"
+        );
+    }
 }

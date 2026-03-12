@@ -8,6 +8,7 @@ import { DeeplinkHandler } from "@/components/deeplink-handler";
 import { ShortcutTracker } from "@/components/shortcut-reminder";
 import { PipeInstallDialog } from "@/components/pipe-install-dialog";
 import { usePathname } from "next/navigation";
+import { type as getOsType } from "@tauri-apps/plugin-os";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,16 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const isOverlay = pathname === "/shortcut-reminder";
+  let isMobileRuntime = false;
+  try {
+    isMobileRuntime =
+      typeof window !== "undefined" &&
+      typeof getOsType === "function" &&
+      ["android", "ios"].includes(getOsType());
+  } catch {
+    isMobileRuntime = false;
+  }
+  const showDesktopChrome = !isOverlay && !isMobileRuntime;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -198,9 +209,9 @@ export default function RootLayout({
       </head>
       <Providers>
         <body className={`${inter.className} scrollbar-hide`}>
-          {!isOverlay && <DeeplinkHandler />}
-          {!isOverlay && <ShortcutTracker />}
-          {!isOverlay && <PipeInstallDialog />}
+          {showDesktopChrome && <DeeplinkHandler />}
+          {showDesktopChrome && <ShortcutTracker />}
+          {showDesktopChrome && <PipeInstallDialog />}
           {children}
           {!isOverlay && <Toaster />}
         </body>

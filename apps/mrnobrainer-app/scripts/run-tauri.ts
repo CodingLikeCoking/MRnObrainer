@@ -36,13 +36,20 @@ function detectBrandPatch(args: string[]) {
   return "src-tauri/generated/tauri.brand.dev.json";
 }
 
+function shouldAppendBrandPatch(args: string[]) {
+  return args[0] !== "android";
+}
+
 await syncBrandingFiles(projectRoot);
 
 const args = process.argv.slice(2);
 const brandPatch = detectBrandPatch(args);
+const tauriArgs = shouldAppendBrandPatch(args)
+  ? ["tauri", ...args, "--config", brandPatch]
+  : ["tauri", ...args];
 const child = spawn(
   "bunx",
-  ["tauri", ...args, "--config", brandPatch],
+  tauriArgs,
   {
     cwd: projectRoot,
     stdio: "inherit",

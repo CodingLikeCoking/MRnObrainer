@@ -113,7 +113,11 @@ export const Providers = forwardRef<
     <NuqsAdapter>
       <ThemeProvider defaultTheme="light" storageKey="screenpipe-ui-theme">
         {isMobileRuntime ? (
-          <PostHogProvider client={posthog}>{children}</PostHogProvider>
+          <SettingsProvider>
+            <ChangelogDialogProvider>
+              <PostHogProvider client={posthog}>{children}</PostHogProvider>
+            </ChangelogDialogProvider>
+          </SettingsProvider>
         ) : (
           <SettingsProvider>
             <ChangelogDialogProvider>
