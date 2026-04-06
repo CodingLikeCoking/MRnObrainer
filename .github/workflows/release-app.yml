@@ -1148,10 +1148,22 @@ jobs:
           echo "since=${PREV}" >> $GITHUB_OUTPUT
           echo "Changelog: v${VERSION} since ${PREV}"
 
+      - name: Check changelog dispatch configuration
+        id: changelog_dispatch
+        env:
+          WEBSITE_REPO_TOKEN: ${{ secrets.WEBSITE_REPO_TOKEN }}
+          MRNOBRAINER_WEBSITE_REPO: ${{ vars.MRNOBRAINER_WEBSITE_REPO }}
+        run: |
+          if [ -n "$WEBSITE_REPO_TOKEN" ] && [ -n "$MRNOBRAINER_WEBSITE_REPO" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger changelog generation on website repo
         uses: peter-evans/repository-dispatch@v3
         continue-on-error: true
-        if: ${{ secrets.WEBSITE_REPO_TOKEN != '' && vars.MRNOBRAINER_WEBSITE_REPO != '' }}
+        if: steps.changelog_dispatch.outputs.enabled == 'true'
         with:
           token: ${{ secrets.WEBSITE_REPO_TOKEN }}
           repository: ${{ vars.MRNOBRAINER_WEBSITE_REPO }}
