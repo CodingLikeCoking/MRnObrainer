@@ -1,0 +1,10 @@
+{
+  "version": "2.3.74",
+  "pub_date": "2026-04-17T09:26:16Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "url": "https://github.com/CodingLikeCoking/MRnObrainer/releases/download/v2.3.74/MRnObrainer.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUemE4RnZZMGpJU3RJcVdYSjVyankzNFRlTGVoNGIzL0pWTjh3RmVrOW1HTmMva09SaXZEeTVnVittaFprTWRaT0lHVTJqVW1EbXpKbkNpb3dRMG5wM1B4d0IvQnpRZXdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc2NDE3ODk0CWZpbGU6TVJuT2JyYWluZXIuYXBwLnRhci5negp1bUVoNllkTVhsajNwenlCb1BtUWZsRmpwdkRWejhPZjBFb3BmdUF1dHhMUDNaeTZ6dlhqNW1wRFpjOUEvWDdsczg4ZHVTWTBmTkVaVXE0dmxnNGhDdz09Cg=="
+    }
+  }
+}
