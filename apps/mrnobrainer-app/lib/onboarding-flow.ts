@@ -17,7 +17,7 @@ export const ONBOARDING_WINDOW_SIZES: Record<
   { width: number; height: number }
 > = {
   privacy: { width: 560, height: 620 },
-  permissions: { width: 500, height: 560 },
+  permissions: { width: 1120, height: 920 },
   engine: { width: 500, height: 560 },
   capture: { width: 500, height: 520 },
   tour: { width: 560, height: 620 },

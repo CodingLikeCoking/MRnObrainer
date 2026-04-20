@@ -14,6 +14,7 @@ import {
   getCaptureRecoveryState,
   isCaptureOperational,
   setCaptureRecoveryState,
+  useCaptureStatusSnapshot,
 } from "@/lib/capture-health";
 import { checkFirstRunNotification } from "@/lib/notifications";
 import { ChangelogDialog } from "@/components/changelog-dialog";
@@ -94,11 +95,15 @@ function DesktopHomeInner() {
   const { onboardingData } = useOnboarding();
   const isEnterprise = useIsEnterpriseBuild();
   const { health, isServerDown, isLoading: isHealthLoading } = useHealthCheck();
+  const { recoveryState: captureRecoveryState } = useCaptureStatusSnapshot(7000);
   const { isMac } = usePlatform();
   const [isRestarting, setIsRestarting] = useState(false);
   const [isSendingLogs, setIsSendingLogs] = useState(false);
   const [logsSent, setLogsSent] = useState(false);
   const isProcessingRef = useRef(false);
+  const isCaptureRecoveryPending =
+    captureRecoveryState === "granted_pending_relaunch" ||
+    captureRecoveryState === "relaunching";
   
   // Listen for update events from Rust backend
   useUpdateListener();
@@ -390,7 +395,7 @@ function DesktopHomeInner() {
           <UpdateBanner />
           
           <div className="relative w-full scrollbar-hide bg-transparent">
-            {isServerDown && (
+            {isServerDown && !isCaptureRecoveryPending && (
               <div className="glass-toolbar shadow-glass-strong fixed right-4 top-10 z-50 flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
                 <WifiOff className="h-3 w-3" />
                 <span>{isHealthLoading ? `connecting to ${PRODUCT_NAME}...` : "capture service reconnecting..."}</span>

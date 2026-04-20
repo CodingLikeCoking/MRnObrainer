@@ -4,7 +4,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import PermissionsStep from "@/components/onboarding/permissions-step";
 import EngineStartup from "@/components/onboarding/engine-startup";
@@ -42,6 +42,7 @@ export default function OnboardingPage() {
   );
   const [isVisible, setIsVisible] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Restore saved step on mount
   useEffect(() => {
@@ -88,6 +89,9 @@ export default function OnboardingPage() {
   useEffect(() => {
     setWindowSizeForSlide(currentSlide);
     setIsVisible(true);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
     posthog.capture(`onboarding_${currentSlide}_viewed`);
   }, [currentSlide]);
 
@@ -141,6 +145,13 @@ export default function OnboardingPage() {
     );
   }
 
+  const slideShellClassName =
+    currentSlide === "permissions"
+      ? "max-w-[1120px]"
+      : currentSlide === "tour"
+        ? "max-w-2xl"
+        : "max-w-lg";
+
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-transparent">
       <div
@@ -154,9 +165,12 @@ export default function OnboardingPage() {
       <div className="relative z-10 w-full bg-transparent p-3" data-tauri-drag-region />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-1 items-start justify-center overflow-y-auto overflow-x-hidden px-4 pb-6 pt-2 sm:px-6 sm:pb-8 sm:pt-4 md:items-center">
+      <div
+        ref={scrollContainerRef}
+        className="relative z-10 flex flex-1 items-start justify-center overflow-y-auto overflow-x-hidden px-4 pb-6 pt-2 sm:px-6 sm:pb-8 sm:pt-4"
+      >
         <div
-          className={`mx-auto w-full max-w-lg py-2 transition-opacity duration-300 sm:py-4 ${
+          className={`mx-auto w-full ${slideShellClassName} py-2 transition-opacity duration-300 sm:py-4 ${
             isVisible ? "opacity-100" : "opacity-0"
           }`}
         >

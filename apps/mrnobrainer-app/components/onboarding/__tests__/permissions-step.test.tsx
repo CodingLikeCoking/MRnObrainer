@@ -46,15 +46,16 @@ describe("PermissionsStep", () => {
     vi.clearAllMocks();
   });
 
-  it("separates the permissions needed to start from optional extras", async () => {
+  it("uses a guided permission coach with lightweight optional follow-up", async () => {
     render(<PermissionsStep handleNextSlide={vi.fn()} />);
 
-    expect(await screen.findByText(/required to start/i)).toBeInTheDocument();
-    expect(screen.getByText(/optional extras/i)).toBeInTheDocument();
-    expect(screen.getByText(/screen recording/i)).toBeInTheDocument();
-    expect(screen.getByText(/browser urls \(arc\)/i)).toBeInTheDocument();
+    expect(await screen.findByText(/let mrnobrainer observe safely/i)).toBeInTheDocument();
+    expect(screen.getByText(/required permissions/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/screen recording/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/optional later/i)).toBeInTheDocument();
+    expect(screen.getByText(/browser url access for arc/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/you only need the required items to begin/i)
+      screen.getByText(/we only ask for the macos permissions needed to start capture/i)
     ).toBeInTheDocument();
   });
 });

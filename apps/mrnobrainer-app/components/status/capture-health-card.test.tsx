@@ -10,19 +10,24 @@ import { commands } from "@/lib/utils/tauri";
 import { requestScreenCaptureRecovery } from "@/lib/capture-health";
 
 const refresh = vi.fn();
+const snapshot = {
+  permissions: {
+    screenRecording: "denied",
+    microphone: "granted",
+    accessibility: "granted",
+  },
+  health: null,
+  verificationState: "missing" as "missing" | "granted_pending_relaunch" | "relaunching" | "verified",
+  recoveryState: null as "granted_pending_relaunch" | "relaunching" | null,
+  refresh,
+};
 
 vi.mock("@/lib/capture-health", () => ({
   requestScreenCaptureRecovery: vi.fn().mockResolvedValue(undefined),
   useCaptureStatusSnapshot: () => ({
-    permissions: {
-      screenRecording: "denied",
-      microphone: "granted",
-      accessibility: "granted",
-    },
-    health: null,
-    verificationState: "missing",
-    refresh,
+    ...snapshot,
   }),
+  isPermissionGranted: (status?: string | null) => status === "granted" || status === "notNeeded",
   formatCaptureTarget: () => "No screen selected",
   formatCaptureTimestamp: () => "No frames yet",
 }));
@@ -36,6 +41,10 @@ vi.mock("@/lib/utils/tauri", () => ({
 
 describe("CaptureHealthCard", () => {
   it("makes missing Screen Recording the primary local setup blocker", async () => {
+    snapshot.permissions.screenRecording = "denied";
+    snapshot.verificationState = "missing";
+    snapshot.recoveryState = null;
+
     render(<CaptureHealthCard />);
 
     expect(screen.getByText(/Screen Recording is blocking MRnObrainer/i)).toBeInTheDocument();
@@ -47,5 +56,27 @@ describe("CaptureHealthCard", () => {
       expect(requestScreenCaptureRecovery).toHaveBeenCalled();
       expect(commands.requestPermission).toHaveBeenCalledWith("screenRecording");
     });
+  });
+
+  it("shows a recovery state instead of a blocker when screen access is already granted", () => {
+    snapshot.permissions.screenRecording = "granted";
+    snapshot.verificationState = "granted_pending_relaunch";
+    snapshot.recoveryState = "granted_pending_relaunch";
+
+    render(<CaptureHealthCard />);
+
+    expect(screen.getByText(/MRnObrainer is relaunching capture/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Screen Recording is blocking MRnObrainer/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the guided recovery state while macOS settings are still being updated", () => {
+    snapshot.permissions.screenRecording = "denied";
+    snapshot.verificationState = "missing";
+    snapshot.recoveryState = "granted_pending_relaunch";
+
+    render(<CaptureHealthCard />);
+
+    expect(screen.getByText(/Finish Screen Recording in macOS/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Screen Recording is blocking MRnObrainer/i)).not.toBeInTheDocument();
   });
 });

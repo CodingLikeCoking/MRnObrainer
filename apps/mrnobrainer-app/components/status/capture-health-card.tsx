@@ -8,9 +8,19 @@ import {
   useCaptureStatusSnapshot,
   formatCaptureTarget,
   formatCaptureTimestamp,
+  isPermissionGranted,
 } from "@/lib/capture-health";
 import { commands } from "@/lib/utils/tauri";
-import { AlertTriangle, Monitor, RadioTower, RefreshCw, Settings, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Monitor,
+  RadioTower,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import { PRODUCT_NAME } from "@/lib/product-config";
 
 const STATE_LABELS = {
@@ -27,11 +37,13 @@ export function CaptureHealthCard({
   title?: string;
   compact?: boolean;
 }) {
-  const { permissions, health, verificationState, refresh } = useCaptureStatusSnapshot(compact ? 7000 : 5000);
-  const screenPermissionMissing =
-    permissions?.screenRecording &&
-    permissions.screenRecording !== "granted" &&
-    permissions.screenRecording !== "notNeeded";
+  const { permissions, health, verificationState, recoveryState, refresh } = useCaptureStatusSnapshot(compact ? 7000 : 5000);
+  const screenGranted = isPermissionGranted(permissions?.screenRecording);
+  const isRecoveryInFlight =
+    recoveryState === "granted_pending_relaunch" || recoveryState === "relaunching";
+  const isAwaitingGrant = !screenGranted && isRecoveryInFlight;
+  const isAwaitingRelaunch = screenGranted && isRecoveryInFlight;
+  const screenPermissionMissing = verificationState === "missing" && !isRecoveryInFlight;
 
   const openScreenRecordingSettings = async () => {
     await requestScreenCaptureRecovery();
@@ -98,6 +110,53 @@ export function CaptureHealthCard({
                 <Settings className="h-4 w-4" />
                 Open Screen Recording Settings
               </Button>
+              <Button type="button" variant="outline" onClick={refresh} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Re-check
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>{content}</CardContent>
+      </Card>
+    );
+  }
+
+  if (isAwaitingGrant || isAwaitingRelaunch) {
+    return (
+      <Card className="border-sky-300/40 bg-sky-50/80 shadow-[0_18px_70px_rgba(14,165,233,0.12)] dark:bg-sky-950/20">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <Badge
+                variant="outline"
+                className="w-fit rounded-full border-sky-500/40 bg-sky-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300"
+              >
+                Capture recovery
+              </Badge>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                {isAwaitingRelaunch ? (
+                  <CheckCircle2 className="h-5 w-5 text-sky-600" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin text-sky-600" />
+                )}
+                {isAwaitingRelaunch
+                  ? `${PRODUCT_NAME} is relaunching capture`
+                  : "Finish Screen Recording in macOS"}
+              </CardTitle>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {isAwaitingRelaunch
+                  ? "macOS accepted Screen Recording. MRnObrainer is waiting to relaunch and bind the local capture pipeline."
+                  : "Enable MRnObrainer in System Settings → Privacy & Security → Screen & System Audio Recording, then come back here. The app will relaunch automatically once macOS confirms the change."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!isAwaitingRelaunch && (
+                <Button type="button" onClick={openScreenRecordingSettings} className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Open Screen Recording Settings
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={refresh} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
                 Re-check
