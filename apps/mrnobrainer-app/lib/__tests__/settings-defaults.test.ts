@@ -9,6 +9,9 @@ describe("default desktop settings", () => {
     expect(settings.aiPresets[0]?.provider).toBe("native-ollama");
     expect(settings.aiPresets[0]?.url).toBe("http://localhost:11434/v1");
     expect(settings.aiPresets[0]?.defaultPreset).toBe(true);
+    expect(settings.overlayMode).toBe("window");
+    expect(settings.showChatShortcut).toBe("Shift+Super+L");
+    expect(settings.searchShortcut).toBe("Shift+Super+K");
   });
 
   it("drops cloud AI presets from runtime defaults", () => {

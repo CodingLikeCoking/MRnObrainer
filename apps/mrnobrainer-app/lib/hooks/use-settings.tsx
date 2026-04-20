@@ -11,7 +11,10 @@ import posthog from "posthog-js";
 import localforage from "localforage";
 import { User } from "../utils/tauri";
 import { SettingsStore } from "../utils/tauri";
-import type { AIProviderType as TauriAIProviderType, JsonValue } from "@/lib/utils/tauri";
+import type {
+  AIProviderType as TauriAIProviderType,
+  JsonValue,
+} from "@/lib/utils/tauri";
 import { hasTauriRuntime } from "@/lib/runtime-environment";
 import {
   type RewindSettingsState,
@@ -340,8 +343,8 @@ const DEFAULT_SETTINGS: Settings = {
   stopRecordingShortcut: "Super+Alt+X",
   startAudioShortcut: "",
   stopAudioShortcut: "",
-  showChatShortcut: "Control+Super+L",
-  searchShortcut: "Control+Super+K",
+  showChatShortcut: "Shift+Super+L",
+  searchShortcut: "Shift+Super+K",
   realtimeAudioTranscriptionEngine: "deepgram",
   disableVision: false,
   disableOcr: false,
@@ -351,7 +354,7 @@ const DEFAULT_SETTINGS: Settings = {
   chatHistory: DEFAULT_CHAT_HISTORY,
   enableInputCapture: false,
   enableAccessibility: true,
-  overlayMode: "fullscreen",
+  overlayMode: "window",
   showOverlayInScreenRecording: false,
   videoQuality: "balanced",
   transcriptionMode: "batch",
@@ -446,8 +449,12 @@ function applyPlatformDefaults(settings: Settings): Settings {
           : "tesseract";
     settings.fps = p === "macos" ? 0.5 : 1;
     settings.showScreenpipeShortcut = getDefaultShowShortcut(p);
-    settings.showChatShortcut = p === "windows" ? "Alt+L" : "Control+Super+L";
-    settings.searchShortcut = p === "windows" ? "Alt+K" : "Control+Super+K";
+    settings.showChatShortcut = p === "windows" ? "Alt+L" : "Shift+Super+L";
+    settings.searchShortcut = p === "windows" ? "Alt+K" : "Shift+Super+K";
+
+    if (p === "macos") {
+      settings.overlayMode = "window";
+    }
 
     if (p === "windows") {
       settings.enableAccessibility = true;
@@ -497,10 +504,7 @@ async function getRuntimeDefaultSettings(): Promise<Settings> {
 // Store singleton
 let _store: Promise<Store> | undefined;
 const browserStoreData = new Map<string, unknown>();
-const browserStoreListeners = new Map<
-  string,
-  Set<(value: unknown) => void>
->();
+const browserStoreListeners = new Map<string, Set<(value: unknown) => void>>();
 
 function emitBrowserStoreKeyChange(key: string) {
   const listeners = browserStoreListeners.get(key);
@@ -613,17 +617,61 @@ function createSettingsStore() {
       needsUpdate = true;
     }
 
-    // Migration: Fill empty showChatShortcut with platform default
-    if (!settings.showChatShortcut || settings.showChatShortcut.trim() === "") {
-      const p = platform();
-      settings.showChatShortcut = p === "windows" ? "Alt+L" : "Control+Super+L";
+    const detectedPlatform = (() => {
+      try {
+        return platform();
+      } catch {
+        return settings.platform || "unknown";
+      }
+    })();
+
+    const defaultChatShortcut =
+      detectedPlatform === "windows" ? "Alt+L" : "Shift+Super+L";
+    const defaultSearchShortcut =
+      detectedPlatform === "windows" ? "Alt+K" : "Shift+Super+K";
+    const legacyChatShortcut =
+      detectedPlatform === "windows" ? "Alt+L" : "Control+Super+L";
+    const legacySearchShortcut =
+      detectedPlatform === "windows" ? "Alt+K" : "Control+Super+K";
+
+    if (!(settings as any)._chatSearchShortcutMigrationDone) {
+      if (
+        !settings.showChatShortcut ||
+        settings.showChatShortcut.trim() === "" ||
+        settings.showChatShortcut === legacyChatShortcut
+      ) {
+        settings.showChatShortcut = defaultChatShortcut;
+        needsUpdate = true;
+      }
+
+      if (
+        !settings.searchShortcut ||
+        settings.searchShortcut.trim() === "" ||
+        settings.searchShortcut === legacySearchShortcut
+      ) {
+        settings.searchShortcut = defaultSearchShortcut;
+        needsUpdate = true;
+      }
+
+      (settings as any)._chatSearchShortcutMigrationDone = true;
+      needsUpdate = true;
+    }
+
+    if (
+      detectedPlatform === "macos" &&
+      !(settings as any)._windowModeDefaultMigrationDone
+    ) {
+      if (!settings.overlayMode || settings.overlayMode === "fullscreen") {
+        settings.overlayMode = "window";
+        needsUpdate = true;
+      }
+      (settings as any)._windowModeDefaultMigrationDone = true;
       needsUpdate = true;
     }
 
     // Always override platform with runtime detection — never trust persisted value.
     // Platform can be "unknown" if it was saved during SSR or before Tauri was ready.
     try {
-      const detectedPlatform = platform();
       if (settings.platform !== detectedPlatform) {
         settings.platform = detectedPlatform;
         needsUpdate = true;
@@ -866,7 +914,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getDataDir = async () => {
     if (!hasTauriRuntime()) {
-      return settings.dataDir && settings.dataDir !== "default" && settings.dataDir !== ""
+      return settings.dataDir &&
+        settings.dataDir !== "default" &&
+        settings.dataDir !== ""
         ? settings.dataDir
         : "~/.screenpipe";
     }

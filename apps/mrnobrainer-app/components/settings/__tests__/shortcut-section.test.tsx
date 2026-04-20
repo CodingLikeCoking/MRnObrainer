@@ -7,8 +7,8 @@ vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => ({
     settings: {
       showScreenpipeShortcut: "Shift+Super+O",
-      showChatShortcut: "Control+Super+L",
-      searchShortcut: "Control+Super+K",
+      showChatShortcut: "Shift+Super+L",
+      searchShortcut: "Shift+Super+K",
       startRecordingShortcut: "Super+Alt+U",
       stopRecordingShortcut: "Super+Alt+X",
       startAudioShortcut: "",

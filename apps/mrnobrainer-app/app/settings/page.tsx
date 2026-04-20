@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 
-import { OverlayShell } from "@/components/rewind/overlay-shell";
+import { SettingsShell } from "@/components/settings/settings-shell";
 
 export default function SettingsPage() {
   return (
@@ -13,7 +13,7 @@ export default function SettingsPage() {
         </div>
       }
     >
-      <OverlayShell defaultSection="rewind" showTopDragRegion={false} />
+      <SettingsShell />
     </Suspense>
   );
 }

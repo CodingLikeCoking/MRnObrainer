@@ -430,7 +430,7 @@ export default function GeneralSettings() {
                   { value: "fullscreen", label: "Overlay", desc: "Floating panel" },
                   { value: "window", label: "Window", desc: "Resizable window" },
                 ]).map((option) => {
-                  const isActive = (settings?.overlayMode ?? "fullscreen") === option.value;
+                  const isActive = (settings?.overlayMode ?? "window") === option.value;
                   return (
                     <button
                       key={option.value}
