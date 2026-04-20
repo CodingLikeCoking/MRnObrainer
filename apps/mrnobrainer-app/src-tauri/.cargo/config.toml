@@ -1,0 +1,25 @@
+# Empty config - using root .cargo/config.toml settings
+# This file exists to prevent cargo from looking for missing config
+
+[env]
+CMAKE_POLICY_VERSION_MINIMUM = "3.5"
+# whisper.cpp ggml uses std::filesystem::path which requires macOS 10.15+
+# These are picked up by whisper-rs-sys's cmake build before compilation starts
+# CI can still override via explicit env vars (force = false is default)
+MACOSX_DEPLOYMENT_TARGET = { value = "10.15", force = false }
+CMAKE_OSX_DEPLOYMENT_TARGET = { value = "10.15", force = false }
+CC_aarch64_linux_android = { value = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang", force = true }
+CXX_aarch64_linux_android = { value = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang++", force = true }
+AR_aarch64_linux_android = { value = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar", force = true }
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = { value = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang", force = true }
+
+# On Linux, use gcc linker with -z undefs to allow unresolved symbols
+# for platform-specific execution providers (CoreML, DirectML) that are
+# compiled into ort but not available in the ONNX Runtime library on Linux
+[target.x86_64-unknown-linux-gnu]
+linker = "gcc"
+rustflags = ["-C", "link-arg=-Wl,-z,undefs"]
+
+[target.aarch64-linux-android]
+linker = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang"
+ar = "/Users/owenwong/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"

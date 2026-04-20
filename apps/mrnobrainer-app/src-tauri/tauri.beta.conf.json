@@ -1,0 +1,132 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MRnObrainer Beta",
+  "identifier": "screenpi.pe.beta",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:1420"
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "active": true,
+    "publisher": "Mediar, Inc.",
+    "category": "DeveloperTool",
+    "shortDescription": "Action-first memory for your desktop",
+    "longDescription": "MRnObrainer keeps your captured day local, makes it searchable, and helps you close it out with a clearer dashboard and recap.",
+    "copyright": "",
+    "targets": [
+      "app",
+      "dmg",
+      "deb",
+      "appimage",
+      "nsis"
+    ],
+    "externalBin": [
+      "bun"
+    ],
+    "icon": [
+      "icons/beta/32x32.png",
+      "icons/beta/128x128.png",
+      "icons/beta/128x128@2x.png",
+      "icons/beta/256x256.png",
+      "icons/beta/512x512.png",
+      "icons/beta/1024x1024.png",
+      "icons/beta/icon.icns",
+      "icons/beta/icon.ico",
+      "icons/screenpipe-logo-tray-failed.png",
+      "icons/screenpipe-logo-tray-beta.png"
+    ],
+    "resources": [
+      "assets/*"
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "endpoints": [],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRBQzg0ODYzNkZDMTZCRjMKUldUemE4RnZZMGpJU3JrNU5KNis0amRIc3JIR0paeDd5V3NoZ1BaVGRyOFAvekcxZXVJOUZ2bzUK"
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "mrnobrainer",
+          "screenpipe-beta"
+        ]
+      },
+      "mobile": [
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/auth"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/stripe-connect"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/purchase-successful"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/settings"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/changelog"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/onboarding"
+          ]
+        },
+        {
+          "host": "screenpi.pe",
+          "pathPrefix": [
+            "/status"
+          ]
+        }
+      ]
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "trayIcon": {
+      "id": "screenpipe_main",
+      "iconPath": "assets/screenpipe-logo-tray-white.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": true
+    },
+    "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/**",
+          "$APPLOCALDATA/**",
+          "$APPCONFIG/**",
+          "$RESOURCE/**",
+          "$TEMP/**",
+          "$HOME/.screenpipe/**"
+        ]
+      },
+      "csp": "default-src 'self' asset: data: blob: http://ipc.localhost; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data: blob: http://localhost:* http://127.0.0.1:* https:; font-src 'self' asset: data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://screenpi.pe https://api.screenpi.pe https://api.openai.com https://*.openai.com https://auth.openai.com https://api.github.com; media-src 'self' asset: data: blob: http://localhost:* http://127.0.0.1:*; worker-src 'self' blob:;"
+    },
+    "macOSPrivateApi": true
+  }
+}

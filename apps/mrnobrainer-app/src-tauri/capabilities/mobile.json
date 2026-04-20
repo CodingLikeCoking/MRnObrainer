@@ -1,0 +1,21 @@
+{
+  "identifier": "mobile-satellite",
+  "description": "minimal permissions for the Android and iOS satellite shell",
+  "local": true,
+  "platforms": [
+    "android",
+    "iOS"
+  ],
+  "windows": [
+    "*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:app:allow-version",
+    "core:window:default",
+    "os:default",
+    "notification:default",
+    "store:default"
+  ]
+}
