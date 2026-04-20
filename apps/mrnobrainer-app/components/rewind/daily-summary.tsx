@@ -22,6 +22,7 @@ import {
 import { platform } from "@tauri-apps/plugin-os";
 import { Command } from "@tauri-apps/plugin-shell";
 import posthog from "posthog-js";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 const API = "http://localhost:3030";
 
@@ -205,6 +206,8 @@ function formatDate(dateStr: string): string {
 
 async function isPluggedIn(): Promise<boolean> {
   try {
+    if (!hasTauriRuntime()) return true;
+
     const os = platform();
     if (os !== "macos") return true;
 
@@ -259,6 +262,8 @@ export function DailySummaryCard({
 
   // Check AI availability (once on mount)
   useEffect(() => {
+    if (!hasTauriRuntime()) return;
+
     const os = platform();
     if (os !== "macos") return;
 

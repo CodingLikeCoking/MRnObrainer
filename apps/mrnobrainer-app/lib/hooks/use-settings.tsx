@@ -597,6 +597,38 @@ function createSettingsStore() {
       }
     }
 
+    if (!(settings as any)._timelinePreviewDefaultMigrationDone) {
+      const legacyDashboardDefaults = [
+        "goal",
+        "capture-health",
+        "ask-ai",
+        "automations",
+        "daily-review",
+      ];
+      const nextDashboardDefaults = getDefaultRewindSettings().visibleWidgets;
+      const currentVisibleWidgets = settings.rewind.visibleWidgets ?? [];
+      const currentWidgetOrder = settings.rewind.widgetOrder ?? [];
+
+      if (
+        JSON.stringify(currentVisibleWidgets) ===
+        JSON.stringify(legacyDashboardDefaults)
+      ) {
+        settings.rewind.visibleWidgets = [...nextDashboardDefaults];
+        needsUpdate = true;
+      }
+
+      if (
+        JSON.stringify(currentWidgetOrder) ===
+        JSON.stringify(legacyDashboardDefaults)
+      ) {
+        settings.rewind.widgetOrder = [...nextDashboardDefaults];
+        needsUpdate = true;
+      }
+
+      (settings as any)._timelinePreviewDefaultMigrationDone = true;
+      needsUpdate = true;
+    }
+
     const runtimeShowShortcut = getDefaultShowShortcut(
       settings.platform || platform(),
     );

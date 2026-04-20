@@ -77,9 +77,17 @@ describe("OverlayShell", () => {
     });
   });
 
-  it("can render without the top drag strip for standalone settings windows", () => {
-    const { container } = render(<OverlayShell defaultSection="rewind" showTopDragRegion={false} />);
+  it("keeps the dashboard pane shrinkable inside the split view", () => {
+    render(<OverlayShell />);
 
-    expect(container.querySelector(".h-8.bg-transparent[data-tauri-drag-region]")).toBeNull();
+    const dashboard = screen.getByText("dashboard:home");
+    expect(dashboard.parentElement).toHaveClass("w-full");
+    expect(dashboard.parentElement?.parentElement).toHaveClass(
+      "min-h-0",
+      "min-w-0",
+      "flex-1",
+      "overflow-x-hidden",
+      "overflow-y-auto"
+    );
   });
 });

@@ -678,6 +678,7 @@ export function buildRewindSettingsSections(): RewindSettingsSection[] {
 export function getDefaultDashboardWidgets(): RewindDashboardWidget[] {
   return [
     "goal",
+    "timeline-preview",
     "capture-health",
     "ask-ai",
     "automations",

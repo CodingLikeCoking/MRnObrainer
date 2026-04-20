@@ -10,6 +10,7 @@ import { getFrameAppName } from "@/components/rewind/timeline/timeline";
 import { toast } from "@/components/ui/use-toast";
 import type { TemplatePipe } from "@/lib/hooks/use-pipes";
 import type { StreamTimeSeriesResponse } from "@/components/rewind/timeline";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 export function useTimelineKeyboard(opts: {
 	enabled: boolean;
@@ -294,7 +295,7 @@ export function useTimelineKeyboard(opts: {
 
 	// Listen for open-search event from Rust (Cmd+K global shortcut)
 	useEffect(() => {
-		if (!enabled) return;
+		if (!hasTauriRuntime()) return;
 
 		const unlisten = listen("open-search", () => {
 			if (!showSearchModal) {

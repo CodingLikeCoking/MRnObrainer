@@ -46,6 +46,7 @@ import { useScrollZoom } from "@/components/rewind/hooks/use-scroll-zoom";
 import { useDateNavigation } from "@/components/rewind/hooks/use-date-navigation";
 import { useTimelineKeyboard } from "@/components/rewind/hooks/use-timeline-keyboard";
 import { PRODUCT_NAME } from "@/lib/product-config";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 export interface StreamTimeSeriesResponse {
 	timestamp: string;
@@ -375,6 +376,8 @@ export default function Timeline({
 
 	// Listen for window focus events to refresh timeline data (debounced)
 	useEffect(() => {
+		if (!hasTauriRuntime()) return;
+
 		let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 		const unlisten = listen<boolean>("window-focused", (event) => {
 			if (event.payload) {
@@ -502,6 +505,8 @@ export default function Timeline({
 
 	// Listen for navigate-to-timestamp events from search window / deep links
 	useEffect(() => {
+		if (!hasTauriRuntime()) return;
+
 		const unlisten = listen<string>("navigate-to-timestamp", async (event) => {
 			await navigateToTimestamp(event.payload);
 		});
@@ -513,6 +518,8 @@ export default function Timeline({
 
 	// Listen for navigate-to-frame events (deep link: screenpipe://frame/12345)
 	useEffect(() => {
+		if (!hasTauriRuntime()) return;
+
 		const fetchFrameMetadata = async (id: string, retries = 3): Promise<{ timestamp?: string } | null> => {
 			for (let i = 0; i < retries; i++) {
 				try {
@@ -1416,74 +1423,32 @@ export default function Timeline({
 				) : null}
 
 	
-				{/* Search — inline overlay in embedded mode, standard modal otherwise */}
-				{embedded && showSearchModal ? (
-					<div className="absolute inset-0 z-50 flex flex-col">
-						{/* Backdrop */}
-						<div
-							className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-							onClick={() => setShowSearchModal(false)}
-						/>
-						{/* Panel — drops down from top */}
-						<div className="relative z-10 m-3 mt-14 flex flex-col max-h-[calc(100%-7rem)] rounded-lg border border-border shadow-2xl overflow-hidden">
-							<SearchModal
-								isOpen={true}
-								embedded
-								onClose={() => setShowSearchModal(false)}
-								onNavigateToTimestamp={(timestamp) => {
-									setShowSearchModal(false);
-									const targetDate = new Date(timestamp);
-									setSeekingTimestamp(timestamp);
-									if (!isSameDay(targetDate, currentDate)) {
-										navigateDirectToDate(targetDate);
-									} else {
-										// Set pending ref so the effect handles it if jumpToTime
-										// fails (e.g. frames are stale from a previous date swap)
-										pendingNavigationRef.current = targetDate;
-										const hasTargetDayFrames = frames.some(f =>
-											isSameDay(new Date(f.timestamp), targetDate)
-										);
-										if (hasTargetDayFrames) {
-											// Use HTTP JPEG fallback + prevent highlight dismiss during search nav
-											setSearchNavFrame(true);
-											jumpToTime(targetDate);
-											pendingNavigationRef.current = null;
-											setSeekingTimestamp(null);
-										}
-										// else: pending effect will handle when correct frames arrive
-									}
-								}}
-							/>
-						</div>
-					</div>
-				) : (
-					<SearchModal
-						isOpen={showSearchModal}
-						onClose={() => setShowSearchModal(false)}
-						onNavigateToTimestamp={(timestamp) => {
-							const targetDate = new Date(timestamp);
-							setSeekingTimestamp(timestamp);
-							if (!isSameDay(targetDate, currentDate)) {
-								navigateDirectToDate(targetDate);
-							} else {
-								// Set pending ref so the effect handles it if jumpToTime
-								// fails (e.g. frames are stale from a previous date swap)
-								pendingNavigationRef.current = targetDate;
-								const hasTargetDayFrames = frames.some(f =>
-									isSameDay(new Date(f.timestamp), targetDate)
-								);
-								if (hasTargetDayFrames) {
-									// Use HTTP JPEG fallback + prevent highlight dismiss during search nav
-									setSearchNavFrame(true);
-									jumpToTime(targetDate);
-									pendingNavigationRef.current = null;
-									setSeekingTimestamp(null);
-								}
-								// else: pending effect will handle when correct frames arrive
+				<SearchModal
+					isOpen={showSearchModal}
+					onClose={() => setShowSearchModal(false)}
+					onNavigateToTimestamp={(timestamp) => {
+						const targetDate = new Date(timestamp);
+						setSeekingTimestamp(timestamp);
+						if (!isSameDay(targetDate, currentDate)) {
+							navigateDirectToDate(targetDate);
+						} else {
+							// Set pending ref so the effect handles it if jumpToTime
+							// fails (e.g. frames are stale from a previous date swap)
+							pendingNavigationRef.current = targetDate;
+							const hasTargetDayFrames = frames.some(f =>
+								isSameDay(new Date(f.timestamp), targetDate)
+							);
+							if (hasTargetDayFrames) {
+								// Use HTTP JPEG fallback + prevent highlight dismiss during search nav
+								setSearchNavFrame(true);
+								jumpToTime(targetDate);
+								pendingNavigationRef.current = null;
+								setSeekingTimestamp(null);
 							}
-						}}
-					/>
-				)}
+							// else: pending effect will handle when correct frames arrive
+						}
+					}}
+				/>
 			</div>
 		</TimelineProvider>
 	);

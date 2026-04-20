@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import Timeline from "@/components/rewind/timeline";
 import type { Message as InboxMessage } from "@/components/inbox-messages";
@@ -64,6 +64,8 @@ type RewindHomeScreenProps = {
   onInspectRun?: (runId: string) => void;
   onAskAiDraftChange: (value: string) => void;
   onAskAiSubmit: () => void;
+  askAiCardRef?: RefObject<HTMLDivElement>;
+  askAiInputRef?: RefObject<HTMLInputElement>;
   locationLocked?: boolean;
   onToggleLocationLock?: () => void;
   widgetOrder?: RewindDashboardWidget[];
@@ -137,6 +139,8 @@ export function RewindHomeScreen({
   onInspectRun,
   onAskAiDraftChange,
   onAskAiSubmit,
+  askAiCardRef,
+  askAiInputRef,
   locationLocked = false,
   onToggleLocationLock,
   widgetOrder,
@@ -247,7 +251,7 @@ export function RewindHomeScreen({
     ),
     "capture-health": <CaptureHealthCard />,
     "ask-ai": (
-      <Card>
+      <Card ref={askAiCardRef}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Bot className="h-4 w-4" />
@@ -260,12 +264,18 @@ export function RewindHomeScreen({
           </p>
           <div className="flex gap-2">
             <Input
+              ref={askAiInputRef}
               value={askAiDraft}
               onChange={(event) => onAskAiDraftChange(event.target.value)}
               placeholder="What did I finish today?"
               className="h-11"
             />
-            <Button type="button" onClick={onAskAiSubmit}>
+            <Button
+              type="button"
+              onClick={onAskAiSubmit}
+              className="h-11 gap-2 rounded-full px-4"
+            >
+              <Sparkles className="h-4 w-4" />
               Ask AI
             </Button>
           </div>
@@ -661,10 +671,10 @@ export function RewindHomeScreen({
   };
 
   return (
-    <div className="min-h-0">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
+    <div className="min-h-0 min-w-0">
+      <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
             <Grip className="h-3.5 w-3.5" />
             Dashboard window
           </div>
@@ -676,9 +686,11 @@ export function RewindHomeScreen({
           )}
         </div>
 
-        <section className="grid gap-6">
+        <section className="grid min-w-0 gap-6">
           {orderedWidgets.map((widgetId) => (
-            <div key={widgetId}>{widgetMap[widgetId]}</div>
+            <div key={widgetId} className="min-w-0">
+              {widgetMap[widgetId]}
+            </div>
           ))}
         </section>
 

@@ -136,6 +136,17 @@ describe("Rewind home model", () => {
     expect(getDefaultShowShortcut("linux")).toBe("Shift+Super+O");
   });
 
+  it("shows the timeline preview before capture health on the default dashboard", () => {
+    expect(getDefaultDashboardWidgets()).toEqual([
+      "goal",
+      "timeline-preview",
+      "capture-health",
+      "ask-ai",
+      "automations",
+      "daily-review",
+    ]);
+  });
+
   it("builds a founder-alpha home view model with developer and personal ops opportunities", () => {
     const viewModel = buildRewindHomeViewModel({
       goal: "Ship the founder alpha and send investors the end-of-day update",

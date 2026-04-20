@@ -410,6 +410,45 @@ describe("RewindHomeScreen", () => {
     expect(screen.getByText("timeline mock")).toBeInTheDocument();
   });
 
+  it("keeps dashboard wrappers shrinkable so widgets do not force horizontal overflow", () => {
+    render(
+      <RewindHomeScreen
+        viewModel={viewModel}
+        inboxMessages={[]}
+        onMarkInboxMessageRead={() => {}}
+        onDeleteInboxMessage={() => {}}
+        isCallingItADay={false}
+        askAiDraft="What did I finish today?"
+        onGoalChange={() => {}}
+        onCallItADay={() => {}}
+        onOpenAssistant={() => {}}
+        onPlanOpportunity={() => {}}
+        onQueueOpportunity={() => {}}
+        onReparentClaw={() => {}}
+        onAutoPickTask={() => {}}
+        onRunAction={() => {}}
+        onInspectRun={() => {}}
+        onAskAiDraftChange={() => {}}
+        onAskAiSubmit={() => {}}
+      />
+    );
+
+    const dashboardBadge = screen.getByText("Dashboard window");
+    expect(dashboardBadge.parentElement).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+      "justify-between"
+    );
+    expect(dashboardBadge.parentElement?.parentElement).toHaveClass(
+      "mx-auto",
+      "flex",
+      "min-w-0",
+      "w-full",
+      "max-w-6xl"
+    );
+  });
+
   it("shows an install-state message when the daily review pipe is missing", () => {
     render(
       <RewindHomeScreen

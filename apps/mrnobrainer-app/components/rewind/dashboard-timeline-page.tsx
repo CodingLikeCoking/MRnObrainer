@@ -76,12 +76,12 @@ export function DashboardTimelinePage({
   return (
     <div
       ref={scrollContainerRef}
-      className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide"
+      className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pb-8 pt-2 sm:gap-6">
+      <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-5 px-4 pb-8 pt-2 sm:gap-6">
         {activeSection === "home" ? (
           <div ref={contentSectionRef}>
-            <RewindHome showTimelinePreview={false} activeSection={activeSection} />
+            <RewindHome showTimelinePreview activeSection={activeSection} />
           </div>
         ) : (
           <section

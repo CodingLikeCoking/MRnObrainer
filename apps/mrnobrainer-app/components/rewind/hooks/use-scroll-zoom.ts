@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { throttle } from "lodash";
 import type { StreamTimeSeriesResponse } from "@/components/rewind/timeline";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
@@ -215,6 +216,8 @@ export function useScrollZoom(opts: {
 	// The Rust side attaches an NSMagnificationGestureRecognizer to the panel
 	// and emits "native-magnify" with the magnification delta.
 	useEffect(() => {
+		if (!hasTauriRuntime()) return;
+
 		const unlisten = listen<number>("native-magnify", (event) => {
 			const magnification = event.payload;
 			isZoomingRef.current = true;

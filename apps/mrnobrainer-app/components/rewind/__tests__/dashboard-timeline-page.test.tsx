@@ -41,7 +41,7 @@ describe("DashboardTimelinePage", () => {
       behavior: "auto",
     });
     expect(homeSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ showTimelinePreview: false })
+      expect.objectContaining({ showTimelinePreview: true })
     );
     expect(screen.queryByTestId("timeline")).not.toBeInTheDocument();
   });

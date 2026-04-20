@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { join } from "@tauri-apps/api/path";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import localforage from "localforage";
@@ -138,6 +139,8 @@ export function RewindHome({
   const [isGeneratingReplay, setIsGeneratingReplay] = useState(false);
   const isApplyingSavedPosition = useRef(false);
   const savePositionTimeout = useRef<number | null>(null);
+  const askAiCardRef = useRef<HTMLDivElement | null>(null);
+  const askAiInputRef = useRef<HTMLInputElement | null>(null);
 
   const activePipe = pipes.find((pipe) => pipe.config.name === rewindSettings.dailyReviewPipeName);
   const latestExecution = activePipe?.recent_executions?.[0];
@@ -165,14 +168,7 @@ export function RewindHome({
   const widgetOrder = useMemo<RewindDashboardWidget[]>(() => {
     const ordered = rewindSettings.widgetOrder.filter((widget) => visibleWidgets.includes(widget));
     const missing = visibleWidgets.filter((widget) => !ordered.includes(widget));
-    const merged = [...ordered, ...missing];
-    if (!merged.includes("capture-health")) {
-      return merged;
-    }
-    return [
-      "capture-health",
-      ...merged.filter((widget) => widget !== "capture-health"),
-    ];
+    return [...ordered, ...missing];
   }, [rewindSettings.widgetOrder, visibleWidgets]);
 
   const loadHomeData = useCallback(async () => {
@@ -266,6 +262,25 @@ export function RewindHome({
   useEffect(() => {
     setGoalDraft(rewindSettings.goal);
   }, [rewindSettings.goal]);
+
+  useEffect(() => {
+    if (!hasTauriRuntime()) return;
+
+    const unlisten = listen("focus-dashboard-ask-ai", () => {
+      setTimeout(() => {
+        askAiCardRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        askAiInputRef.current?.focus();
+        askAiInputRef.current?.select();
+      }, 50);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     if (savePositionTimeout.current) {
@@ -1014,6 +1029,8 @@ export function RewindHome({
             onInspectRun={setSelectedRunId}
             onAskAiDraftChange={setAskAiDraft}
             onAskAiSubmit={askAi}
+            askAiCardRef={askAiCardRef}
+            askAiInputRef={askAiInputRef}
             locationLocked={rewindSettings.dashboardLocationLocked}
             onToggleLocationLock={toggleLocationLock}
             widgetOrder={widgetOrder}

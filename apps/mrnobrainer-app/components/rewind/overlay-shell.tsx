@@ -110,12 +110,10 @@ function normalizeSection(value: string | null): MainSection | SettingsModalSect
 
 type OverlayShellProps = {
   defaultSection?: MainSection | SettingsModalSection;
-  showTopDragRegion?: boolean;
 };
 
 export function OverlayShell({
   defaultSection = "home",
-  showTopDragRegion = true,
 }: OverlayShellProps) {
   const [activeSection, setActiveSection] = useQueryState("section", {
     defaultValue: defaultSection,
@@ -349,13 +347,11 @@ export function OverlayShell({
   const isFullHeight = activeSection === "timeline";
 
   return (
-    <div className="min-h-screen bg-background">
-      {showTopDragRegion ? (
-        <div className="h-8 bg-transparent" data-tauri-drag-region></div>
-      ) : null}
+    <div className="min-h-screen overflow-hidden bg-background">
+      <div className="h-8 bg-transparent" data-tauri-drag-region></div>
 
       <div className="px-4">
-        <div className={cn("flex min-h-0", showTopDragRegion ? "h-[calc(100vh-2rem)]" : "h-screen")}>
+        <div className="flex h-[calc(100vh-2rem)] min-h-0 min-w-0">
           <TooltipProvider delayDuration={0}>
             <div
               className={cn(
@@ -485,12 +481,12 @@ export function OverlayShell({
             </div>
           </TooltipProvider>
 
-          <div className="relative flex min-h-0 flex-1 flex-col rounded-tr-lg bg-background">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col rounded-tr-lg bg-background">
             {isFullHeight ? (
-              <div className="min-h-0 flex-1 overflow-hidden">{renderMainSection()}</div>
+              <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{renderMainSection()}</div>
             ) : (
-              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-                <div className="mx-auto max-w-5xl p-6 pb-12">{renderMainSection()}</div>
+              <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+                <div className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pt-6">{renderMainSection()}</div>
               </div>
             )}
 
