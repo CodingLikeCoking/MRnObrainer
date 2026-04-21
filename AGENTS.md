@@ -33,3 +33,10 @@
 - Preserve approval gates for actions that send, buy, delete, log in, publish, or modify external systems.
 - When changes touch permissions, capture lifecycle, sync, telemetry, updater flow, release automation, or public docs, require explicit review and document the exact validation that ran.
 - For the full policy, see `docs/agent-coding-safety-policy.md`.
+
+## TokenBurner Workflow Routing
+
+- This repo is the canonical upstream main repo for TokenBurner's `Memory Offload` workflow. Read `.tokenburner/repo-summary.md` before deeper work.
+- For any helper/plugin handoff with `StorageClear` or `TreasureTrigger`, also consult `/Users/owenwong/Desktop/Codex/TokenBurner/state/workflow-runs.md` and `.json` so the current workflow owner stays clear.
+- Keep work bounded to this repo unless TokenBurner explicitly routes the current step to another repo or the user broadens scope.
+- If the workflow still needs user action, stop with the smallest unblock step; otherwise keep the bounded step moving and refresh `.tokenburner/` state.
