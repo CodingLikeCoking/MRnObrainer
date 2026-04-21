@@ -122,6 +122,25 @@ const DEFAULT_LOCAL_AI_URL = "http://localhost:11434/v1";
 const DEFAULT_CHATGPT_URL = "https://api.openai.com/v1";
 const DEFAULT_LOCAL_AI_MODEL = "ministral-3:latest";
 
+const isConnectionRefusedError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const withCode = error as { code?: string };
+  if (withCode.code === "ECONNREFUSED") {
+    return true;
+  }
+
+  const withCause = error as { cause?: unknown };
+  if (withCause.cause && isConnectionRefusedError(withCause.cause)) {
+    return true;
+  }
+
+  const aggregate = error as { errors?: unknown[] };
+  return Array.isArray(aggregate.errors) && aggregate.errors.some(isConnectionRefusedError);
+};
+
 const getGuidedChoiceFromProvider = (
   provider: AIPreset["provider"]
 ): GuidedProviderChoice => {
@@ -381,7 +400,9 @@ export function AIProviderConfig({
       };
       setOpenAIModels(data.data || []);
     } catch (error) {
-      console.error("error fetching ollama models:", error);
+      if (!isConnectionRefusedError(error)) {
+        console.error("error fetching ollama models:", error);
+      }
       setOpenAIModels([]);
     } finally {
       setIsLoadingModels(false);
@@ -1328,18 +1349,18 @@ export const AIPresetsSelector = ({
                   aria-expanded={open}
                   aria-controls={commandListId}
                   className={cn(
-                    "w-full justify-between hover:bg-accent hover:text-accent-foreground",
+                    "w-full min-w-0 justify-between overflow-hidden hover:bg-accent hover:text-accent-foreground",
                     compact && "h-8 text-xs",
                     selectedPresetRequiresLogin && "border-amber-500/50"
                   )}
                 >
                   {selectedPreset ? (
-                    <div className="flex w-full items-center justify-between gap-2 overflow-hidden">
-                      <div className="flex items-center gap-2 min-w-[80px] max-w-[30%]">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                         {selectedPresetRequiresLogin && (
                           <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
                         )}
-                        <span className="font-medium truncate text-left">
+                        <span className="min-w-0 flex-1 truncate text-left font-medium">
                           {formatPresetName(
                             aiPresets.find(
                               (preset) => preset.id === selectedPreset,
@@ -1347,15 +1368,20 @@ export const AIPresetsSelector = ({
                           )}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground overflow-hidden">
-                        <span className="rounded bg-muted px-1.5 py-0.5 whitespace-nowrap">
+                      <div
+                        className={cn(
+                          "flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground",
+                          compact ? "max-w-[45%]" : "max-w-[55%]"
+                        )}
+                      >
+                        <span className="max-w-[8rem] truncate rounded bg-muted px-1.5 py-0.5 whitespace-nowrap">
                           {
                             aiPresets.find(
                               (preset) => preset.id === selectedPreset,
                             )?.provider
                           }
                         </span>
-                        <span className="hidden sm:block truncate max-w-[30%]">
+                        <span className={cn("min-w-0 truncate", compact ? "hidden" : "hidden sm:block")}>
                           {
                             aiPresets.find(
                               (preset) => preset.id === selectedPreset,
