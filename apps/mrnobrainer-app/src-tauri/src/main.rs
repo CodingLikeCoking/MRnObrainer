@@ -309,6 +309,17 @@ async fn register_shortcut(
         .map_err(|e| e.to_string())
 }
 
+fn open_dashboard_ask_ai(app: &AppHandle) {
+    show_main_window(app, false);
+    let _ = app.emit("navigate", json!({ "url": "/?section=home" }));
+
+    let app_for_focus = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let _ = app_for_focus.emit("focus-dashboard-ask-ai", ());
+    });
+}
+
 #[tauri::command]
 #[specta::specta]
 async fn update_global_shortcuts(
@@ -364,13 +375,13 @@ async fn apply_shortcuts(app: &AppHandle, config: &ShortcutConfig) -> Result<(),
                 let label = main_label_for_mode(&mode);
 
                 if let Some(window) = app.get_webview_window(label) {
-                    match window.is_visible() {
-                        Ok(true) => {
+                    match (window.is_visible(), window.is_focused()) {
+                        (Ok(true), Ok(true)) => {
                             info!("window is visible, hiding main window");
                             hide_main_window(app)
                         }
                         _ => {
-                            info!("window is not visible, showing main window");
+                            info!("window is hidden or unfocused, showing main window");
                             show_main_window(app, false)
                         }
                     }
@@ -395,21 +406,14 @@ async fn apply_shortcuts(app: &AppHandle, config: &ShortcutConfig) -> Result<(),
                 }
 
                 if let Some(window) = app.get_webview_window(label) {
-                    info!("found {} window, checking visibility", label);
-                    match window.is_visible() {
-                        Ok(true) => {
-                            info!("{} window is visible, hiding it", label);
+                    info!("found {} window, checking visibility/focus", label);
+                    match (window.is_visible(), window.is_focused()) {
+                        (Ok(true), Ok(true)) => {
+                            info!("{} window is visible and focused, hiding it", label);
                             hide_main_window(app)
                         }
-                        Ok(false) => {
-                            info!("{} window exists but not visible, showing it", label);
-                            show_main_window(app, false)
-                        }
-                        Err(e) => {
-                            info!(
-                                "error checking visibility: {}, showing main window anyway",
-                                e
-                            );
+                        _ => {
+                            info!("{} window is hidden or unfocused, showing it", label);
                             show_main_window(app, false)
                         }
                     }
@@ -476,7 +480,7 @@ async fn apply_shortcuts(app: &AppHandle, config: &ShortcutConfig) -> Result<(),
     )
     .await?;
 
-    // Register show chat shortcut (global - toggles standalone AI chat window) (defer off event stack)
+    // Register show chat shortcut (global - focus Ask AI inside the dashboard)
     register_shortcut(
         app,
         &config.show_chat,
@@ -487,75 +491,19 @@ async fn apply_shortcuts(app: &AppHandle, config: &ShortcutConfig) -> Result<(),
                 let app = &app_for_closure;
                 info!("show chat shortcut triggered");
                 let _ = app.emit("shortcut-show-chat", ());
-                // Toggle the chat window - hide if visible, show if not.
-                // Use order_out (not close) to preserve the pre-created panel
-                // so it can reappear on fullscreen Spaces without re-creation.
-                if let Some(_window) = app.get_webview_window("chat") {
-                    #[cfg(target_os = "macos")]
-                    {
-                        use tauri_nspanel::ManagerExt;
-                        if let Ok(panel) = app.get_webview_panel("chat") {
-                            if panel.is_visible() {
-                                panel.order_out(None);
-                                return;
-                            }
-                        }
-                    }
-                    #[cfg(not(target_os = "macos"))]
-                    {
-                        if _window.is_visible().unwrap_or(false) {
-                            let _ = _window.hide();
-                            return;
-                        }
-                    }
-                }
-                let _ = ShowRewindWindow::Chat.show(app);
+                open_dashboard_ask_ai(app);
             });
         },
     )
     .await?;
 
-    // Register search shortcut (global - opens overlay with search focused) (defer off event stack)
+    // Register search shortcut (global - opens dashboard with search focused) (defer off event stack)
     register_shortcut(app, &config.search, config.is_disabled("search"), |app| {
         let app_for_closure = app.clone();
         let _ = app.run_on_main_thread(move || {
             let app = &app_for_closure;
             info!("search shortcut triggered");
-            // Always show the overlay, then emit search event to focus the search input
-            #[cfg(target_os = "macos")]
-            {
-                use crate::store::SettingsStore;
-                use crate::window_api::main_label_for_mode;
-                let mode = SettingsStore::get(app)
-                    .unwrap_or_default()
-                    .unwrap_or_default()
-                    .overlay_mode;
-                let label = main_label_for_mode(&mode);
-                if let Some(window) = app.get_webview_window(label) {
-                    if !window.is_visible().unwrap_or(false) {
-                        show_main_window(app, false);
-                    }
-                } else {
-                    show_main_window(app, false);
-                }
-            }
-            #[cfg(not(target_os = "macos"))]
-            {
-                use crate::store::SettingsStore;
-                use crate::window_api::main_label_for_mode;
-                let mode = SettingsStore::get(app)
-                    .unwrap_or_default()
-                    .unwrap_or_default()
-                    .overlay_mode;
-                let label = main_label_for_mode(&mode);
-                if let Some(window) = app.get_webview_window(label) {
-                    if !window.is_visible().unwrap_or(false) {
-                        show_main_window(app, false);
-                    }
-                } else {
-                    show_main_window(app, false);
-                }
-            }
+            show_main_window(app, false);
             // Emit event so the frontend opens the search modal
             let _ = app.emit("open-search", ());
         });
@@ -1915,52 +1863,17 @@ async fn main() {
             if !onboarding_store.is_completed {
                 let _ = ShowRewindWindow::Onboarding.show(&app.handle());
             } else {
-                let _ = ShowRewindWindow::Main.show(&app.handle());
-            }
-
-            // Pre-create chat panel (hidden) so the shortcut can show an
-            // existing panel on fullscreen Spaces. New windows created in
-            // Regular activation policy can't appear on fullscreen Spaces,
-            // but existing panels with MoveToActiveSpace + level 1001 can.
-            // The Chat creation path only configures level/behaviors — it
-            // does NOT activate or show, so no blink or focus-steal here.
-            // macOS-only: on Windows/Linux the non-macOS chat builder doesn't
-            // set .visible(false), causing a visible chat window on startup.
-            #[cfg(target_os = "macos")]
-            if onboarding_store.is_completed {
-                let app_handle_chat = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    // Wait for main window to finish setup
-                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-                    if app_handle_chat.get_webview_window("chat").is_none() {
-                        info!("Pre-creating chat panel for fullscreen Space support");
-                        match ShowRewindWindow::Chat.show(&app_handle_chat) {
-                            Ok(_window) => {
-                                info!("Chat panel pre-created (hidden, panel configured)");
-                            }
-                            Err(e) => {
-                                warn!("Failed to pre-create chat panel: {}", e);
-                            }
-                        }
-                    }
-                });
+                show_main_window(&app.handle(), false);
             }
 
             // Pi is NOT auto-started at boot — it starts lazily when the user opens
             // the chat (standalone-chat.tsx calls pi_start). An idle watchdog in pi.rs
             // auto-stops it after 5 minutes of inactivity to avoid stale processes.
 
-            // Show shortcut reminder overlay on app startup if enabled AND onboarding is completed
-            // Don't show reminder during first-time onboarding to reduce overwhelm
-            if store.show_shortcut_overlay && onboarding_store.is_completed {
-                let shortcut = store.show_screenpipe_shortcut.clone();
-                let app_handle_reminder = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    // Small delay to ensure windows are ready
-                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                    let _ = commands::show_shortcut_reminder(app_handle_reminder, shortcut).await;
-                });
-            }
+            // Do not auto-show the shortcut reminder on normal app launch.
+            // It steals focus from the primary main overlay and makes launch
+            // feel inconsistent versus the dashboard shortcut/open-app paths.
+            // The reminder remains available via the dedicated settings toggle.
 
             // Get app handle once for all initializations
             let app_handle = app.handle().clone();
@@ -2388,10 +2301,12 @@ async fn main() {
                 #[cfg(target_os = "macos")]
                 tauri::RunEvent::Reopen { .. } => {
                     // Defer off the event stack so run handler stays panic-free.
-                    // Open the settings/app window (not the timeline overlay).
+                    // Reopen should match the primary product entrypoint and the
+                    // global MRnObrainer dashboard shortcut: show the main overlay,
+                    // not a separate settings surface.
                     let app = app_handle.app_handle().clone();
                     let _ = app_handle.app_handle().run_on_main_thread(move || {
-                        let _ = ShowRewindWindow::Settings { page: None }.show(&app);
+                        show_main_window(&app, false);
                     });
                 }
                 _ => {}

@@ -2568,7 +2568,7 @@ export function StandaloneChat({ className }: { className?: string } = {}) {
           <span>New</span>
         </Button>
         <kbd suppressHydrationWarning className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted/50 border border-border/50 rounded">
-          {formatShortcutDisplay(settings.showChatShortcut || (isMac ? "Control+Super+L" : "Alt+L"), isMac)}
+          {formatShortcutDisplay(settings.showChatShortcut || (isMac ? "Shift+Super+L" : "Alt+L"), isMac)}
         </kbd>
       </div>
 
@@ -2903,6 +2903,7 @@ export function StandaloneChat({ className }: { className?: string } = {}) {
               if (match) setActivePreset(match);
             } : undefined}
             showLoginCta={false}
+            compact
           />
         </div>
 

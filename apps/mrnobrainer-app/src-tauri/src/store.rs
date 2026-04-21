@@ -574,11 +574,11 @@ impl Default for SettingsStore {
             #[cfg(target_os = "windows")]
             show_chat_shortcut: "Alt+L".to_string(),
             #[cfg(not(target_os = "windows"))]
-            show_chat_shortcut: "Control+Super+L".to_string(),
+            show_chat_shortcut: "Shift+Super+L".to_string(),
             #[cfg(target_os = "windows")]
             search_shortcut: "Alt+K".to_string(),
             #[cfg(not(target_os = "windows"))]
-            search_shortcut: "Control+Super+K".to_string(),
+            search_shortcut: "Shift+Super+K".to_string(),
             realtime_audio_transcription_engine: "deepgram".to_string(),
             disable_vision: false,
             disable_ocr: false,
@@ -591,7 +591,7 @@ impl Default for SettingsStore {
             auto_update: true,
             update_channel: default_update_channel(),
             #[cfg(target_os = "macos")]
-            overlay_mode: "fullscreen".to_string(),
+            overlay_mode: "window".to_string(),
             #[cfg(not(target_os = "macos"))]
             overlay_mode: "window".to_string(),
             show_overlay_in_screen_recording: false,
@@ -642,6 +642,72 @@ impl SettingsStore {
                             }
                         }
                     }
+                }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                let old_chat_default = "Control+Super+L";
+                let old_search_default = "Control+Super+K";
+                let new_chat_default = "Shift+Super+L";
+                let new_search_default = "Shift+Super+K";
+
+                let shortcut_migration_done = obj
+                    .get("_chatSearchShortcutMigrationDone")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false);
+                if !shortcut_migration_done {
+                    let should_update_chat = obj
+                        .get("showChatShortcut")
+                        .and_then(|value| value.as_str())
+                        .map(|value| value.trim().is_empty() || value == old_chat_default)
+                        .unwrap_or(true);
+                    if should_update_chat {
+                        obj.insert(
+                            "showChatShortcut".to_string(),
+                            Value::String(new_chat_default.to_string()),
+                        );
+                    }
+
+                    let should_update_search = obj
+                        .get("searchShortcut")
+                        .and_then(|value| value.as_str())
+                        .map(|value| value.trim().is_empty() || value == old_search_default)
+                        .unwrap_or(true);
+                    if should_update_search {
+                        obj.insert(
+                            "searchShortcut".to_string(),
+                            Value::String(new_search_default.to_string()),
+                        );
+                    }
+
+                    obj.insert(
+                        "_chatSearchShortcutMigrationDone".to_string(),
+                        Value::Bool(true),
+                    );
+                }
+
+                let window_mode_migration_done = obj
+                    .get("_windowModeDefaultMigrationDone")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false);
+                if !window_mode_migration_done {
+                    let should_update_overlay_mode = obj
+                        .get("overlayMode")
+                        .and_then(|value| value.as_str())
+                        .map(|value| value.trim().is_empty() || value == "fullscreen")
+                        .unwrap_or(true);
+                    if should_update_overlay_mode {
+                        obj.insert(
+                            "overlayMode".to_string(),
+                            Value::String("window".to_string()),
+                        );
+                    }
+
+                    obj.insert(
+                        "_windowModeDefaultMigrationDone".to_string(),
+                        Value::Bool(true),
+                    );
                 }
             }
         }
@@ -973,6 +1039,7 @@ impl RemindersSettingsStore {
 #[cfg(test)]
 mod tests {
     use super::{default_analytics_enabled, default_audio_chunk_duration_secs, SettingsStore};
+    use serde_json::json;
 
     #[test]
     fn test_public_defaults_disable_analytics() {
@@ -987,6 +1054,51 @@ mod tests {
         assert_eq!(
             SettingsStore::default().audio_chunk_duration,
             default_audio_chunk_duration_secs()
+        );
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_public_defaults_use_shift_super_shortcuts() {
+        let defaults = SettingsStore::default();
+        assert_eq!(defaults.show_chat_shortcut, "Shift+Super+L");
+        assert_eq!(defaults.search_shortcut, "Shift+Super+K");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn test_sanitize_legacy_fields_migrates_old_macos_shortcuts_and_window_mode() {
+        let raw = json!({
+            "showChatShortcut": "Control+Super+L",
+            "searchShortcut": "Control+Super+K",
+            "overlayMode": "fullscreen"
+        });
+
+        let sanitized = SettingsStore::sanitize_legacy_fields(raw);
+
+        assert_eq!(
+            sanitized.get("showChatShortcut").and_then(|v| v.as_str()),
+            Some("Shift+Super+L")
+        );
+        assert_eq!(
+            sanitized.get("searchShortcut").and_then(|v| v.as_str()),
+            Some("Shift+Super+K")
+        );
+        assert_eq!(
+            sanitized.get("overlayMode").and_then(|v| v.as_str()),
+            Some("window")
+        );
+        assert_eq!(
+            sanitized
+                .get("_chatSearchShortcutMigrationDone")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            sanitized
+                .get("_windowModeDefaultMigrationDone")
+                .and_then(|v| v.as_bool()),
+            Some(true)
         );
     }
 }

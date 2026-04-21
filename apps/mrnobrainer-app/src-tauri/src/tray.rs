@@ -271,7 +271,7 @@ fn create_dynamic_menu(
     let (default_show, default_search, default_chat) = if cfg!(target_os = "windows") {
         ("Alt+Shift+O", "Alt+K", "Alt+L")
     } else {
-        ("Shift+Super+O", "Control+Super+K", "Control+Super+L")
+        ("Shift+Super+O", "Shift+Super+K", "Shift+Super+L")
     };
     let show_shortcut = store
         .get("showScreenpipeShortcut")
@@ -307,7 +307,7 @@ fn create_dynamic_menu(
                 .build(app)?,
         )
         .item(
-            &MenuItemBuilder::with_id("show", "Timeline")
+            &MenuItemBuilder::with_id("show", "Dashboard")
                 .accelerator(&to_accelerator(&show_shortcut))
                 .build(app)?,
         );
@@ -492,7 +492,13 @@ fn handle_menu_event(app_handle: &AppHandle, event: tauri::menu::MenuEvent) {
         "show_chat" => {
             let app = app_handle.clone();
             let _ = app_handle.run_on_main_thread(move || {
-                let _ = ShowRewindWindow::Chat.show(&app);
+                show_main_window(&app, false);
+                let _ = app.emit("navigate", serde_json::json!({ "url": "/?section=home" }));
+                let app_for_focus = app.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    let _ = app_for_focus.emit("focus-dashboard-ask-ai", ());
+                });
                 let _ = app.emit("tray-show-chat", ());
             });
         }

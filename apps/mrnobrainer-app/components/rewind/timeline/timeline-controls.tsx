@@ -134,12 +134,12 @@ export function TimelineControls({
 	const [calendarOpen, setCalendarOpen] = useState(false);
 
 	const searchShortcutDisplay = useMemo(
-		() => formatShortcutForDisplay(settings.searchShortcut || (isMac ? "Control+Super+K" : "Alt+K"), isMac),
+		() => formatShortcutForDisplay(settings.searchShortcut || (isMac ? "Shift+Super+K" : "Alt+K"), isMac),
 		[settings.searchShortcut, isMac]
 	);
 
 	const chatShortcutDisplay = useMemo(
-		() => formatShortcutForDisplay(settings.showChatShortcut || (isMac ? "Control+Super+L" : "Alt+L"), isMac),
+		() => formatShortcutForDisplay(settings.showChatShortcut || (isMac ? "Shift+Super+L" : "Alt+L"), isMac),
 		[settings.showChatShortcut, isMac]
 	);
 

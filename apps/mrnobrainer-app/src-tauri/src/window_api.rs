@@ -671,7 +671,7 @@ impl RewindWindowId {
             RewindWindowId::Search => (800.0, 600.0),
             RewindWindowId::Onboarding => (450.0, 500.0),
             RewindWindowId::Chat => (600.0, 750.0),
-            RewindWindowId::PermissionRecovery => (500.0, 580.0),
+            RewindWindowId::PermissionRecovery => (920.0, 720.0),
         })
     }
 
@@ -730,7 +730,7 @@ impl ShowRewindWindow {
         #[cfg(target_os = "macos")]
         {
             builder = builder
-                .decorations(false)
+                .decorations(true)
                 .hidden_title(true)
                 .title_bar_style(tauri::TitleBarStyle::Overlay);
         }
@@ -762,7 +762,7 @@ impl ShowRewindWindow {
         #[cfg(target_os = "macos")]
         {
             builder = builder
-                .decorations(false)
+                .decorations(true)
                 .hidden_title(true)
                 .title_bar_style(tauri::TitleBarStyle::Overlay);
         }
@@ -818,50 +818,26 @@ impl ShowRewindWindow {
             info!("showing existing main window (window mode)");
             #[cfg(target_os = "macos")]
             {
-                let app_clone = app.clone();
-                let lbl = label.to_string();
-                run_on_main_thread_safe(app, move || {
-                    if let Ok(panel) = app_clone.get_webview_panel(&lbl) {
-                        use objc::{msg_send, sel, sel_impl};
-                        use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
-                        use tauri_nspanel::cocoa::base::id;
-                        unsafe {
-                            apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
-                        }
-                        panel.set_level(1001);
-                        panel.set_collection_behaviour(
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                        );
-                        // Update screen capture sharing type
-                        let sharing: u64 = if capturable { 1 } else { 0 };
-                        let _: () = unsafe { msg_send![&*panel, setSharingType: sharing] };
-                        save_frontmost_app();
-                        unsafe {
-                            let _: () = msg_send![&*panel, setAlphaValue: 1.0f64];
-                            // Activate the app so keyboard events route to the WKWebView.
-                            // NSNonactivatingPanelMask prevents the app from becoming
-                            // frontmost on its own, so without this the webview never
-                            // receives keyboard input when opened from the tray menu.
-                            let ns_app: id =
-                                msg_send![objc::class!(NSApplication), sharedApplication];
-                            let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
-                        }
-                        panel.order_front_regardless();
-                        panel.make_key_window();
-                        // Set WKWebView as first responder AFTER make_key_window so
-                        // the responder chain update doesn't reset it to content_view.
-                        // This is critical for trackpad pinch-to-zoom (magnifyWithEvent:).
-                        unsafe {
-                            make_webview_first_responder(&panel);
-                        }
-                        // Remove MoveToActiveSpace so panel stays pinned to this Space
-                        panel.set_collection_behaviour(
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                        );
-                        let _ = app_clone.emit("window-focused", true);
+                use objc::{msg_send, sel, sel_impl};
+                use tauri_nspanel::cocoa::base::{id as cocoa_id, nil as cocoa_nil};
+
+                apply_macos_glass_to_window(app, window, false);
+                window.unminimize().ok();
+                window.show().ok();
+
+                if let Ok(ns_win) = window.ns_window() {
+                    unsafe {
+                        let ns_app: cocoa_id =
+                            msg_send![objc::class!(NSApplication), sharedApplication];
+                        let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
+                        let _: () = msg_send![ns_win as cocoa_id, makeKeyAndOrderFront: cocoa_nil];
+                        make_nswindow_webview_first_responder(ns_win as cocoa_id);
                     }
-                });
+                } else {
+                    window.set_focus().ok();
+                }
+
+                let _ = app.emit("window-focused", true);
             }
             #[cfg(not(target_os = "macos"))]
             {
@@ -1012,6 +988,8 @@ impl ShowRewindWindow {
                     run_on_main_thread_safe(app, move || {
                         if let Ok(panel) = app_clone.get_webview_panel(other_label) {
                             panel.order_out(None);
+                        } else if let Some(window) = app_clone.get_webview_window(other_label) {
+                            window.hide().ok();
                         }
                     });
                 }
@@ -1104,60 +1082,29 @@ impl ShowRewindWindow {
             if id.label() == RewindWindowId::Chat.label() {
                 #[cfg(target_os = "macos")]
                 {
-                    // NOTE: Accessory mode removed — it hides dock icon and tray on notched MacBooks
+                    use objc::{msg_send, sel, sel_impl};
+                    use tauri_nspanel::cocoa::base::{id as cocoa_id, nil as cocoa_nil};
 
-                    let settings = SettingsStore::get(app)
+                    let chat_on_top = SettingsStore::get(app)
                         .unwrap_or_default()
-                        .unwrap_or_default();
-                    let capturable = settings.show_overlay_in_screen_recording;
-                    let chat_on_top = settings.chat_always_on_top;
-                    let app_clone = app.clone();
-                    run_on_main_thread_safe(app, move || {
-                        use objc::{msg_send, sel, sel_impl};
-                        use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
-
-                        if let Ok(panel) = app_clone.get_webview_panel(RewindWindowId::Chat.label())
-                        {
-                            unsafe {
-                                apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
-                            }
-                            if chat_on_top {
-                                panel.set_level(1001);
-                                // NonActivatingPanel (128) so clicking doesn't activate app
-                                unsafe {
-                                    let current: i32 = msg_send![&*panel, styleMask];
-                                    panel.set_style_mask(current | 128);
-                                }
-                            } else {
-                                // Normal window level — allow it to go behind other windows
-                                panel.set_level(0);
-                                // Remove NonActivatingPanel bit (128) so it behaves normally
-                                unsafe {
-                                    let current: i32 = msg_send![&*panel, styleMask];
-                                    panel.set_style_mask(current & !128);
-                                }
-                            }
+                        .unwrap_or_default()
+                        .chat_always_on_top;
+                    apply_macos_glass_to_window(app, &window, false);
+                    window.set_always_on_top(chat_on_top).ok();
+                    window.unminimize().ok();
+                    window.show().ok();
+                    if let Ok(ns_win) = window.ns_window() {
+                        unsafe {
+                            let ns_app: cocoa_id =
+                                msg_send![objc::class!(NSApplication), sharedApplication];
+                            let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
                             let _: () =
-                                unsafe { msg_send![&*panel, setMovableByWindowBackground: true] };
-                            let sharing: u64 = if capturable { 1 } else { 0 };
-                            let _: () = unsafe { msg_send![&*panel, setSharingType: sharing] };
-                            panel.set_collection_behaviour(
-                                NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                                NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                            );
-                            panel.order_front_regardless();
-                            panel.make_key_window();
-                            // Set WKWebView as first responder AFTER make_key_window
-                            unsafe {
-                                make_webview_first_responder(&panel);
-                            }
-                            // Remove MoveToActiveSpace now that the panel is shown.
-                            panel.set_collection_behaviour(
-                                NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                            );
+                                msg_send![ns_win as cocoa_id, makeKeyAndOrderFront: cocoa_nil];
+                            make_nswindow_webview_first_responder(ns_win as cocoa_id);
                         }
-                    });
-
+                    } else {
+                        window.set_focus().ok();
+                    }
                     return Ok(window);
                 }
 
@@ -1212,18 +1159,52 @@ impl ShowRewindWindow {
 
                     #[cfg(target_os = "macos")]
                     let window = {
-                        // NOTE: Do NOT switch to Accessory mode here — it hides dock icon
-                        // and tray on notched MacBooks. NSPanel with proper collection
-                        // behaviors handles fullscreen Space visibility instead.
+                        let app_clone = app.clone();
                         let builder = self
                             .window_builder_with_label(app, "/", main_label_for_mode("window"))
                             .title(crate::brand::PRODUCT_NAME)
                             .inner_size(win_w, win_h)
                             .min_inner_size(800.0, 600.0)
-                            .decorations(false)
-                            .visible(false)
-                            .focused(false)
-                            .transparent(false);
+                            .decorations(true)
+                            .visible(true)
+                            .focused(true)
+                            .transparent(false)
+                            .on_page_load(move |win, payload| {
+                                if matches!(
+                                    payload.event(),
+                                    tauri::webview::PageLoadEvent::Finished
+                                ) {
+                                    use objc::{msg_send, sel, sel_impl};
+                                    use tauri_nspanel::cocoa::base::{
+                                        id as cocoa_id, nil as cocoa_nil,
+                                    };
+
+                                    win.show().ok();
+                                    apply_macos_glass_to_window(&app_clone, &win, false);
+
+                                    if let Ok(ns_win) = win.ns_window() {
+                                        unsafe {
+                                            let ns_app: cocoa_id = msg_send![
+                                                objc::class!(NSApplication),
+                                                sharedApplication
+                                            ];
+                                            let _: () =
+                                                msg_send![ns_app, activateIgnoringOtherApps: true];
+                                            let _: () = msg_send![
+                                                ns_win as cocoa_id,
+                                                makeKeyAndOrderFront: cocoa_nil
+                                            ];
+                                            make_nswindow_webview_first_responder(
+                                                ns_win as cocoa_id,
+                                            );
+                                        }
+                                    } else {
+                                        win.set_focus().ok();
+                                    }
+
+                                    let _ = app_clone.emit("window-focused", true);
+                                }
+                            });
                         builder.build()?
                     };
 
@@ -1252,154 +1233,6 @@ impl ShowRewindWindow {
                             });
                         builder.build()?
                     };
-
-                    // Convert to NSPanel on macOS (same as overlay) so it
-                    // can appear above fullscreen apps
-                    #[cfg(target_os = "macos")]
-                    {
-                        if let Ok(_panel) = window.to_panel() {
-                            info!("Converted window-mode main to panel");
-                            let window_clone = window.clone();
-                            let capturable = show_in_recording;
-                            let app_for_emit = window_clone.app_handle().clone();
-                            run_on_main_thread_safe(app, move || {
-                                use objc::{msg_send, sel, sel_impl};
-                                use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
-                                use tauri_nspanel::cocoa::base::id;
-
-                                if let Ok(panel) = window_clone.to_panel() {
-                                    unsafe {
-                                        apply_macos_glass_titlebar(
-                                            (&*panel) as *const _ as _,
-                                            false,
-                                        );
-                                    }
-                                    // Same level as overlay — above fullscreen
-                                    panel.set_level(1001);
-                                    panel.released_when_closed(true);
-                                    // Do NOT set NSNonactivatingPanelMask (128) for window mode.
-                                    // That mask prevents the app from activating, which breaks
-                                    // keyboard input in WKWebView entirely.
-                                    // Don't hide when app deactivates
-                                    panel.set_hides_on_deactivate(false);
-                                    // Enable dragging by title bar (normal window behavior)
-                                    let _: () = unsafe {
-                                        msg_send![&*panel, setMovableByWindowBackground: false]
-                                    };
-                                    // NSWindowSharingNone=0 hides from screen recorders, NSWindowSharingReadOnly=1 allows capture
-                                    let sharing: u64 = if capturable { 1 } else { 0 };
-                                    let _: () =
-                                        unsafe { msg_send![&*panel, setSharingType: sharing] };
-                                    panel.set_collection_behaviour(
-                                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                                    );
-                                    // Activate the app so keyboard events route to the WKWebView.
-                                    unsafe {
-                                        let ns_app: id = msg_send![
-                                            objc::class!(NSApplication),
-                                            sharedApplication
-                                        ];
-                                        let _: () =
-                                            msg_send![ns_app, activateIgnoringOtherApps: true];
-                                    }
-                                    panel.order_front_regardless();
-                                    panel.make_key_window();
-                                    // Set WKWebView as first responder AFTER make_key_window
-                                    unsafe {
-                                        make_webview_first_responder(&panel);
-                                    }
-                                    let _ = app_for_emit.emit("window-focused", true);
-                                }
-                            });
-                        }
-                    }
-
-                    // Auto-hide on focus loss (debounced to survive workspace swipe animations)
-                    let app_clone = app.clone();
-                    let focus_cancel =
-                        std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-                    window.on_window_event(move |event| {
-                        match event {
-                            tauri::WindowEvent::Focused(is_focused) => {
-                                if !is_focused {
-                                    // Synchronous alpha=0 — no order_out (which
-                                    // causes focus-fight loops when restored).
-                                    #[cfg(target_os = "macos")]
-                                    {
-                                        use objc::{msg_send, sel, sel_impl};
-                                        if let Ok(panel) = app_clone.get_webview_panel("main-window") {
-                                            unsafe {
-                                                let _: () = msg_send![&*panel, setAlphaValue: 0.0f64];
-                                            }
-                                        }
-                                    }
-                                    focus_cancel.store(false, std::sync::atomic::Ordering::SeqCst);
-                                    let cancel = focus_cancel.clone();
-                                    let app = app_clone.clone();
-                                    std::thread::spawn(move || {
-                                        std::thread::sleep(std::time::Duration::from_millis(300));
-                                        if cancel.load(std::sync::atomic::Ordering::SeqCst) {
-                                            return;
-                                        }
-                                        // Use conditional restore: if focus moved to another
-                                        // screenpipe window (Settings, Chat), just clear the
-                                        // saved app. Only activate the previous external app
-                                        // if our app is no longer active.
-                                        #[cfg(target_os = "macos")]
-                                        restore_frontmost_app_if_external();
-                                        // order_out removes the invisible panel from
-                                        // the screen so it can't receive stray clicks.
-                                        #[cfg(target_os = "macos")]
-                                        {
-                                            let app2 = app.clone();
-                                            let _ = app.run_on_main_thread(move || {
-                                                if let Ok(panel) = app2.get_webview_panel("main-window") {
-                                                    panel.order_out(None);
-                                                }
-                                            });
-                                        }
-                                        // Unregister window shortcuts on focus loss (#2219)
-                                        let app3 = app.clone();
-                                        std::thread::spawn(move || {
-                                            let _ = crate::commands::unregister_window_shortcuts(app3);
-                                        });
-                                        let _ = app.emit("window-focused", false);
-                                    });
-                                } else {
-                                    focus_cancel.store(true, std::sync::atomic::Ordering::SeqCst);
-                                    #[cfg(target_os = "macos")]
-                                    {
-                                        use objc::{msg_send, sel, sel_impl};
-                                        use tauri_nspanel::cocoa::base::id;
-                                        if let Ok(panel) = app_clone.get_webview_panel("main-window") {
-                                            unsafe {
-                                                let _: () = msg_send![&*panel, setAlphaValue: 1.0f64];
-                                                // Activate the app so keyboard events
-                                                // route to the WKWebView (same reason as
-                                                // show_existing_main — NonActivatingPanel
-                                                // won't activate the app on its own).
-                                                let ns_app: id = msg_send![objc::class!(NSApplication), sharedApplication];
-                                                let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
-                                            }
-                                            // Ensure panel is key window before setting first
-                                            // responder, otherwise magnifyWithEvent: won't
-                                            // reach the WKWebView (pinch-to-zoom breaks).
-                                            panel.make_key_window();
-                                            unsafe { make_webview_first_responder(&panel); }
-                                        }
-                                    }
-                                    // Re-register window shortcuts on focus gain
-                                    let app_reg = app_clone.clone();
-                                    std::thread::spawn(move || {
-                                        let _ = crate::commands::register_window_shortcuts(app_reg);
-                                    });
-                                    let _ = app_clone.emit("window-focused", true);
-                                }
-                            }
-                            _ => {}
-                        }
-                    });
 
                     return Ok(window);
                 }
@@ -1795,15 +1628,29 @@ impl ShowRewindWindow {
                     return ShowRewindWindow::Main.show(app);
                 }
 
+                let (desired_width, desired_height, desired_min_width, desired_min_height): (f64, f64, f64, f64) =
+                    match onboarding_store.current_step.as_deref() {
+                    Some("permissions") => (1120.0, 920.0, 920.0, 760.0),
+                    Some("privacy") => (560.0, 620.0, 450.0, 500.0),
+                    Some("engine") => (500.0, 560.0, 450.0, 500.0),
+                    Some("capture") | Some("read") => (500.0, 520.0, 450.0, 500.0),
+                    Some("tour") => (560.0, 620.0, 450.0, 500.0),
+                    Some("shortcut") | Some("pair_worker") | Some("pair-worker") => (520.0, 500.0, 450.0, 500.0),
+                    _ => (560.0, 620.0, 450.0, 500.0),
+                };
+
                 // Clamp onboarding window size to primary monitor to prevent min > max panic
                 let (width, height) = if let Ok(Some(monitor)) = app.primary_monitor() {
                     let logical: tauri::LogicalSize<f64> =
                         monitor.size().to_logical(monitor.scale_factor());
-                    (500.0_f64.min(logical.width), 560.0_f64.min(logical.height))
+                    (
+                        desired_width.min(logical.width),
+                        desired_height.min(logical.height),
+                    )
                 } else {
-                    (500.0, 560.0)
+                    (desired_width, desired_height)
                 };
-                let min = self.id().min_size().unwrap_or((0.0, 0.0));
+                let min = (desired_min_width, desired_min_height);
                 let clamped_min = (min.0.min(width), min.1.min(height));
                 let builder = self
                     .window_builder(app, "/onboarding")
@@ -1827,83 +1674,23 @@ impl ShowRewindWindow {
 
                 #[cfg(target_os = "macos")]
                 let window = {
-                    // NOTE: Do NOT switch to Accessory mode here — it hides dock icon
-                    // and tray on notched MacBooks. NSPanel handles fullscreen visibility.
+                    let app_clone = app.clone();
                     let builder = self
                         .window_builder(app, "/chat")
                         .inner_size(650.0, 800.0)
                         .min_inner_size(500.0, 600.0)
-                        .focused(false)
-                        .visible(false)
+                        .focused(true)
+                        .visible(true)
                         .always_on_top(chat_always_on_top)
-                        .hidden_title(true);
-                    let window = builder.build()?;
-
-                    // Convert to panel for fullscreen support.
-                    // Only configure level + behaviors here — do NOT activate
-                    // or show. The show_existing path handles that when the
-                    // user presses the shortcut. This matches the main overlay
-                    // creation pattern and avoids focus-stealing on startup
-                    // when the panel is pre-created hidden.
-                    if let Ok(_panel) = window.to_panel() {
-                        info!("Successfully converted chat window to panel");
-
-                        let window_clone = window.clone();
-                        run_on_main_thread_safe(app, move || {
-                            use objc::{msg_send, sel, sel_impl};
-                            use tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior;
-
-                            if let Ok(panel) = window_clone.to_panel() {
-                                unsafe {
-                                    apply_macos_glass_titlebar((&*panel) as *const _ as _, false);
-                                }
-                                let chat_on_top = SettingsStore::get(window_clone.app_handle())
-                                    .unwrap_or_default()
-                                    .unwrap_or_default()
-                                    .chat_always_on_top;
-
-                                if chat_on_top {
-                                    // Level 1001 to appear above fullscreen apps
-                                    panel.set_level(1001);
-                                    // NonActivatingPanel (128) so clicking the chat doesn't
-                                    // activate the app (which would switch Spaces away from
-                                    // fullscreen apps). Preserve existing style bits.
-                                    unsafe {
-                                        let current: i32 = msg_send![&*panel, styleMask];
-                                        panel.set_style_mask(current | 128);
-                                    }
-                                } else {
-                                    panel.set_level(0);
-                                }
-
-                                // Don't hide when app deactivates
-                                panel.set_hides_on_deactivate(false);
-
-                                // Enable dragging by clicking anywhere on the window background
-                                let _: () = unsafe {
-                                    msg_send![&*panel, setMovableByWindowBackground: true]
-                                };
-
-                                // NSWindowSharingNone=0 hides from screen recorders, NSWindowSharingReadOnly=1 allows capture
-                                let capturable = SettingsStore::get(window_clone.app_handle())
-                                    .unwrap_or_default()
-                                    .unwrap_or_default()
-                                    .show_overlay_in_screen_recording;
-                                let sharing: u64 = if capturable { 1 } else { 0 };
-                                let _: () = unsafe { msg_send![&*panel, setSharingType: sharing] };
-
-                                // MoveToActiveSpace so show_existing can pull
-                                // it to any Space (including fullscreen).
-                                panel.set_collection_behaviour(
-                                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle |
-                                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                                );
+                        .hidden_title(true)
+                        .on_page_load(move |win, payload| {
+                            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                                win.show().ok();
+                                apply_macos_glass_to_window(&app_clone, &win, false);
+                                win.set_focus().ok();
                             }
                         });
-                    }
-
-                    window
+                    builder.build()?
                 };
 
                 #[cfg(not(target_os = "macos"))]
@@ -1922,8 +1709,8 @@ impl ShowRewindWindow {
             ShowRewindWindow::PermissionRecovery => {
                 let builder = self
                     .window_builder(app, "/permission-recovery")
-                    .inner_size(420.0, 420.0)
-                    .min_inner_size(400.0, 350.0)
+                    .inner_size(1060.0, 820.0)
+                    .min_inner_size(920.0, 720.0)
                     .resizable(false)
                     .focused(true)
                     .always_on_top(true)
@@ -1986,19 +1773,20 @@ impl ShowRewindWindow {
                 let app_clone = app.clone();
                 run_on_main_thread_safe(app, move || {
                     use objc::{msg_send, sel, sel_impl};
-                    for label in &["main", "main-window"] {
-                        if let Ok(panel) = app_clone.get_webview_panel(label) {
-                            if panel.is_visible() {
-                                // Alpha=0 first for instant visual hide
-                                unsafe {
-                                    let _: () = msg_send![&*panel, setAlphaValue: 0.0f64];
-                                }
-                                panel.order_out(None);
+                    if let Ok(panel) = app_clone.get_webview_panel("main") {
+                        if panel.is_visible() {
+                            unsafe {
+                                let _: () = msg_send![&*panel, setAlphaValue: 0.0f64];
                             }
+                            panel.order_out(None);
                         }
                     }
-                    // Now that the panel is off-screen, safely restore the
-                    // previous app without triggering focus events on our panel.
+
+                    if let Some(window) = app_clone.get_webview_window("main-window") {
+                        let _ = window.minimize();
+                    }
+
+                    // Only restore the previous app for the fullscreen overlay panel path.
                     restore_frontmost_app();
                 });
 
