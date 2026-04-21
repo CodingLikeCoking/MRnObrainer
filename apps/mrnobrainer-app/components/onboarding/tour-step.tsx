@@ -33,34 +33,34 @@ const TOUR_ITEMS = [
 
 export default function TourStep({ handleNextSlide }: TourStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="space-y-2 text-center">
         <div className="flex justify-center">
           <p className="glass-chip px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
             First useful result
           </p>
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-[2.5rem] font-semibold tracking-tight text-foreground">
           One local loop, then expand
         </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="mx-auto max-w-4xl text-sm leading-relaxed text-muted-foreground">
           The first session should prove three things quickly: capture is on,
           your recent work is visible, and one useful workflow is ready to run.
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {TOUR_ITEMS.map((item, index) => (
           <div
             key={item.title}
-            className="glass-panel flex items-start gap-3 p-4"
+            className={`glass-panel flex items-start gap-3 p-4 ${index === TOUR_ITEMS.length - 1 ? "md:col-span-2" : ""}`}
           >
             <div className="glass-chip flex h-9 w-9 items-center justify-center p-0 text-[11px] font-semibold text-muted-foreground shadow-none">
               {index + 1}
             </div>
             <div>
               <p className="font-medium text-foreground">{item.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{item.detail}</p>
+              <p className="mt-1 text-sm leading-7 text-muted-foreground">{item.detail}</p>
             </div>
           </div>
         ))}

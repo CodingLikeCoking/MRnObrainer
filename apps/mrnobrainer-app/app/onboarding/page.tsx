@@ -149,7 +149,7 @@ export default function OnboardingPage() {
     currentSlide === "permissions"
       ? "max-w-[1120px]"
       : currentSlide === "tour"
-        ? "max-w-2xl"
+        ? "max-w-[1120px]"
         : "max-w-lg";
 
   return (

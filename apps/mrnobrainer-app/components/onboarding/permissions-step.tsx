@@ -124,7 +124,7 @@ function PermissionCoachListItem({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-start gap-3 rounded-2xl border px-4 py-3 text-left transition-all",
+        "flex w-full items-start gap-3 rounded-2xl border px-4 py-2.5 text-left transition-all",
         selected
           ? "border-sky-300/60 bg-sky-50/80 shadow-[0_16px_40px_rgba(14,165,233,0.12)] dark:border-sky-500/30 dark:bg-sky-950/20"
           : "border-border/60 bg-background/80 hover:border-sky-200/70 hover:bg-sky-50/40 dark:hover:border-sky-500/20 dark:hover:bg-sky-950/10"
@@ -147,7 +147,7 @@ function PermissionCoachListItem({
             </span>
           ) : null}
         </div>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{subtitle}</p>
+        <p className="mt-1 text-xs leading-[1.15rem] text-muted-foreground">{subtitle}</p>
       </div>
     </button>
   );
@@ -401,10 +401,10 @@ export default function PermissionsStep({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <div className="mb-6 flex flex-col items-center text-center">
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-[22px] border border-white/60 bg-white/70 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+      <div className="mb-4 flex flex-col items-center text-center">
+        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/60 bg-white/70 shadow-[0_18px_46px_rgba(15,23,42,0.08)] backdrop-blur-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="h-8 w-8" src="/128x128.png" alt="MRnObrainer" />
+          <img className="h-7 w-7" src="/128x128.png" alt="MRnObrainer" />
         </div>
         <Badge
           variant="outline"
@@ -412,23 +412,23 @@ export default function PermissionsStep({
         >
           macOS setup
         </Badge>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-3 text-[2.5rem] font-semibold tracking-tight text-foreground">
           Let MRnObrainer observe safely
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
           We only ask for the macOS permissions needed to start capture. App options and
           extras can stay lightweight and wait until Settings.
         </p>
       </div>
 
-      <div className="grid w-full max-w-5xl gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid w-full max-w-5xl gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
         <Card className="border-white/60 bg-white/70 shadow-[0_22px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-          <CardHeader className="space-y-4 pb-4">
+          <CardHeader className="space-y-3 pb-3">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-sky-600" />
               <CardTitle className="text-base">Required permissions</CardTitle>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-3.5">
               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Progress
               </p>
@@ -440,7 +440,7 @@ export default function PermissionsStep({
               </p>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2.5">
             {requiredPermissions.map((permission) => (
               <PermissionCoachListItem
                 key={permission.id}
@@ -454,7 +454,7 @@ export default function PermissionsStep({
             ))}
 
             {optionalPermissions.length > 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-4">
+              <div className="rounded-2xl border border-dashed border-border/60 bg-background/60 p-3.5">
                 <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   Optional later
                 </p>
@@ -468,9 +468,9 @@ export default function PermissionsStep({
 
         {selectedPermission ? (
           <Card className="border-white/60 bg-white/75 shadow-[0_28px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-            <CardHeader className="space-y-5">
+            <CardHeader className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <CoachStatusBadge
                     status={getCoachStatus(selectedPermission)}
                     optional={selectedPermission.optional}
@@ -478,7 +478,7 @@ export default function PermissionsStep({
                   <div className="flex items-center gap-3">
                     <div
                       className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-[20px]",
+                        "flex h-11 w-11 items-center justify-center rounded-[18px]",
                         getCoachStatus(selectedPermission) === "granted"
                           ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
                           : getCoachStatus(selectedPermission) === "waiting"
@@ -487,18 +487,18 @@ export default function PermissionsStep({
                       )}
                     >
                       {getCoachStatus(selectedPermission) === "granted" ? (
-                        <CheckCircle2 className="h-6 w-6" />
+                        <CheckCircle2 className="h-5 w-5" />
                       ) : getCoachStatus(selectedPermission) === "waiting" ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         selectedPermission.icon
                       )}
                     </div>
                     <div>
-                      <CardTitle className="text-2xl tracking-tight">
+                      <CardTitle className="text-[2rem] tracking-tight">
                         {selectedPermission.title}
                       </CardTitle>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      <p className="mt-1 text-sm leading-5 text-muted-foreground">
                         {selectedPermission.subtitle}
                       </p>
                     </div>
@@ -506,12 +506,12 @@ export default function PermissionsStep({
                 </div>
               </div>
 
-              <div className="grid gap-4 rounded-[28px] border border-border/60 bg-background/70 p-5 md:grid-cols-[1.1fr_0.9fr]">
+              <div className="grid gap-3 rounded-[28px] border border-border/60 bg-background/70 p-4 md:grid-cols-[1.05fr_0.95fr]">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     Why this matters
                   </p>
-                  <p className="mt-3 text-sm leading-6 text-foreground">
+                  <p className="mt-2 text-sm leading-6 text-foreground">
                     {selectedPermission.why}
                   </p>
                 </div>
@@ -520,7 +520,7 @@ export default function PermissionsStep({
                   <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     What to do
                   </p>
-                  <ol className="mt-3 space-y-2 text-sm leading-6 text-foreground">
+                  <ol className="mt-2 space-y-2 text-sm leading-6 text-foreground">
                     {selectedPermission.steps.map((step, index) => (
                       <li key={step} className="flex gap-3">
                         <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500/12 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
@@ -574,7 +574,7 @@ export default function PermissionsStep({
                 </Button>
               </div>
 
-              <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3">
+              <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-2.5">
                 <p className="text-xs leading-6 text-muted-foreground">
                   {getCoachStatus(selectedPermission) === "granted"
                     ? "Looks good — MRnObrainer will move to the next setup step automatically."

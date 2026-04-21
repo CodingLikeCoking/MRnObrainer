@@ -1634,7 +1634,7 @@ impl ShowRewindWindow {
                     Some("privacy") => (560.0, 620.0, 450.0, 500.0),
                     Some("engine") => (500.0, 560.0, 450.0, 500.0),
                     Some("capture") | Some("read") => (500.0, 520.0, 450.0, 500.0),
-                    Some("tour") => (560.0, 620.0, 450.0, 500.0),
+                    Some("tour") => (1120.0, 860.0, 920.0, 720.0),
                     Some("shortcut") | Some("pair_worker") | Some("pair-worker") => (520.0, 500.0, 450.0, 500.0),
                     _ => (560.0, 620.0, 450.0, 500.0),
                 };

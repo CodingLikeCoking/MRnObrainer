@@ -20,7 +20,7 @@ export const ONBOARDING_WINDOW_SIZES: Record<
   permissions: { width: 1120, height: 920 },
   engine: { width: 500, height: 560 },
   capture: { width: 500, height: 520 },
-  tour: { width: 560, height: 620 },
+  tour: { width: 1120, height: 860 },
   shortcut: { width: 520, height: 500 },
 };
 
