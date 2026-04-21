@@ -6,7 +6,7 @@ use crate::commands::show_main_window;
 use crate::health::{get_recording_info, get_recording_status, DeviceKind, RecordingStatus};
 use crate::recording::RecordingState;
 use crate::store::{get_store, OnboardingStore};
-use crate::updates::{is_enterprise_build, is_source_build};
+use crate::updates::is_enterprise_build;
 use crate::window_api::ShowRewindWindow;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -20,7 +20,6 @@ use tauri::{
     menu::{MenuBuilder, MenuItem, MenuItemBuilder, PredefinedMenuItem},
     AppHandle, Manager, Wry,
 };
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_opener::OpenerExt;
 
 use tracing::{debug, error, info};

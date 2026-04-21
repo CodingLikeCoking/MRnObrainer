@@ -531,7 +531,7 @@ impl UpdatesManager {
                         error!("Failed to stop recording before restart: {}", err);
                     }
                     QUIT_REQUESTED.store(true, Ordering::SeqCst);
-                    self.app.restart();
+                    self.update_screenpipe();
                 }
             }
 
@@ -558,7 +558,7 @@ impl UpdatesManager {
         self.update_menu_item.as_ref()
     }
 
-    pub fn update_screenpipe(&self) -> Option<Error> {
+    pub fn update_screenpipe(&self) -> ! {
         self.app.restart();
     }
 
@@ -613,8 +613,7 @@ impl UpdatesManager {
                 error!("Failed to stop recording before restart: {}", err);
             }
             QUIT_REQUESTED.store(true, Ordering::SeqCst);
-            self.app.restart();
-            return Ok(());
+            self.update_screenpipe();
         }
 
         self.check_for_updates(true).await?;

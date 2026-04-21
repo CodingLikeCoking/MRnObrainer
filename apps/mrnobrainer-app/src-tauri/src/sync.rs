@@ -444,10 +444,13 @@ pub async fn lock_sync(app: AppHandle, state: State<'_, SyncState>) -> Result<()
 
 /// Auto-start cloud sync on app launch if previously enabled.
 /// Called from main.rs during startup.
-pub async fn auto_start_sync(app: &AppHandle, state: &SyncState) {
+pub async fn auto_start_sync(_app: &AppHandle, _state: &SyncState) {
     // Cloud sync is experimental and disabled for all users until ready
     info!("cloud sync: disabled (experimental feature)");
-    return;
+}
+
+#[allow(dead_code)]
+async fn auto_start_sync_when_enabled(app: &AppHandle, state: &SyncState) {
     // Get user settings first — needed for both stored-password and auto-derive paths
     let fresh_settings = match SettingsStore::get(app) {
         Ok(Some(s)) => s,

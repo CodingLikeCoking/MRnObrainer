@@ -742,6 +742,9 @@ pub fn sync_now(app: AppHandle) -> Result<SyncResult, String> {
         .collect::<Vec<_>>();
 
     let ingest_response = upload_sync_batch(&Client::new(), &target, &batch)?;
+    let _ingested_event_count = ingest_response
+        .ui_events_inserted
+        .saturating_add(ingest_response.accessibility_inserted);
     if !ingest_response.success {
         return Err("cross-device sync did not complete successfully".to_string());
     }

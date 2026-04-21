@@ -107,11 +107,14 @@ describe("team-crypto", () => {
       const config = { secret: "data" };
       const encrypted = await encryptConfig(config, key);
 
-      // flip a character in the ciphertext
+      // flip a character in the ciphertext without accidentally leaving it unchanged
+      const tamperedIndex = 10;
+      const replacement =
+        encrypted.value_encrypted[tamperedIndex] === "X" ? "Y" : "X";
       const tampered =
-        encrypted.value_encrypted.slice(0, 10) +
-        "X" +
-        encrypted.value_encrypted.slice(11);
+        encrypted.value_encrypted.slice(0, tamperedIndex) +
+        replacement +
+        encrypted.value_encrypted.slice(tamperedIndex + 1);
 
       await expect(
         decryptConfig(tampered, encrypted.nonce, key)

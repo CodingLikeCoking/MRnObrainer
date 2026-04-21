@@ -649,7 +649,6 @@ mod tests {
         let grace = Duration::from_secs(30);
         let threshold = CONSECUTIVE_FAILURES_THRESHOLD;
         let mut current = RecordingStatus::Recording;
-        let mut consecutive_failures: u32 = 0;
 
         // tick 1: healthy
         let status = decide_status(
@@ -663,16 +662,14 @@ mod tests {
         );
         assert_eq!(status, RecordingStatus::Recording);
         current = status;
-        consecutive_failures = 0;
 
         // tick 2: timeout (failure 1)
-        consecutive_failures += 1;
         let status = decide_status(
             &make_connection_error(),
             Duration::from_secs(61),
             grace,
             true,
-            consecutive_failures,
+            1,
             threshold,
             current,
         );
@@ -684,13 +681,12 @@ mod tests {
         current = status;
 
         // tick 3: healthy again — reset
-        consecutive_failures = 0;
         let status = decide_status(
             &make_healthy_response(),
             Duration::from_secs(62),
             grace,
             true,
-            consecutive_failures,
+            0,
             threshold,
             current,
         );
@@ -698,13 +694,12 @@ mod tests {
         current = status;
 
         // tick 4: timeout (failure 1)
-        consecutive_failures += 1;
         let status = decide_status(
             &make_connection_error(),
             Duration::from_secs(63),
             grace,
             true,
-            consecutive_failures,
+            1,
             threshold,
             current,
         );
@@ -716,13 +711,12 @@ mod tests {
         current = status;
 
         // tick 5: timeout (failure 2)
-        consecutive_failures += 1;
         let status = decide_status(
             &make_connection_error(),
             Duration::from_secs(64),
             grace,
             true,
-            consecutive_failures,
+            2,
             threshold,
             current,
         );
@@ -734,13 +728,12 @@ mod tests {
         current = status;
 
         // tick 6: healthy — all good
-        consecutive_failures = 0;
         let status = decide_status(
             &make_healthy_response(),
             Duration::from_secs(65),
             grace,
             true,
-            consecutive_failures,
+            0,
             threshold,
             current,
         );
