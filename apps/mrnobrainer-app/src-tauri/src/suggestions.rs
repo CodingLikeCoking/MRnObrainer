@@ -1036,6 +1036,11 @@ fn parse_ai_response(content: &str) -> Option<AiResult> {
     None
 }
 
+#[cfg(test)]
+fn parse_ai_suggestions(content: &str) -> Option<Vec<Suggestion>> {
+    parse_ai_response(content).map(|result| result.suggestions)
+}
+
 fn extract_json_object(content: &str) -> Option<String> {
     let content = content.trim();
     // Strip markdown code fences
@@ -1485,12 +1490,12 @@ mod tests {
 
         // Run 3 iterations to measure consistency
         let mut all_scores = Vec::new();
-        let mut all_suggestions = Vec::new();
 
         for run in 0..3 {
             let result = generate_ai_suggestions(mode, &apps, &windows).await;
             match result {
-                Some(suggestions) => {
+                Some(result) => {
+                    let suggestions = result.suggestions;
                     let mut run_scores = Vec::new();
                     for s in &suggestions {
                         let (spec, act, nat, brev) =
@@ -1509,7 +1514,6 @@ mod tests {
                         println!("    [{}] \"{}\"\n        spec={:.1} act={:.1} nat={:.1} brev={:.1} → {:.2}",
                             i + 1, s.text, spec, act, nat, brev, total);
                     }
-                    all_suggestions.extend(suggestions);
                 }
                 None => {
                     println!("\n  Run {}: AI returned no results", run + 1);
