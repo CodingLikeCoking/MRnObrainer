@@ -76,6 +76,7 @@ describe("WorkersPage", () => {
     render(<WorkersPage />);
 
     expect(screen.getByText("Keep this Mac as the Oracle")).toBeInTheDocument();
+    expect(screen.getByText(/Use another Mac or SSH-accessible worker/i)).toBeInTheDocument();
     expect(screen.getByText("Symphony-style orchestration")).toBeInTheDocument();
     expect(screen.getByText("Local org chart")).toBeInTheDocument();
     expect(screen.getByText("openclaw mock")).toBeInTheDocument();

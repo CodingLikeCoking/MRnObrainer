@@ -32,9 +32,10 @@ export function WorkersPage() {
               Keep this Mac as the Oracle
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Workers receive context and run longer automations without interrupting the machine
-              you are actively using. Import an existing OpenClaw host, then keep the actual
-              pairing steps explicit and reversible.
+              Use another Mac or SSH-accessible worker for longer-running coding and automation
+              without interrupting the machine you are actively using. Start with a nearby Mac,
+              a Tailnet worker, or an existing SSH host—MRnObrainer keeps setup explicit,
+              local-first, and reversible.
             </p>
           </div>
         </div>
@@ -44,8 +45,9 @@ export function WorkersPage() {
         <div className="flex items-start gap-3">
           <Waypoints className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            v1 only does guided import, validation, and generated commands. It does not
-            auto-provision or mutate the remote host.
+            Recommended for a MacBook Air or Mac mini you want to keep available in the background.
+            This release can discover, validate, and import the worker, but it still keeps remote
+            provisioning in reviewable steps.
           </p>
         </div>
       </section>

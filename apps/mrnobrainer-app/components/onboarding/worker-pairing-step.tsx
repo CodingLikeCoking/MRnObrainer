@@ -136,8 +136,8 @@ export default function WorkerPairingStep({
           Keep this Mac as the oracle
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Import an existing OpenClaw host or another Mac so automations can run
-          remotely without stealing resources from the machine you work on.
+          Import another Mac or an SSH worker so longer automations can run remotely
+          without stealing resources from the machine you work on.
         </p>
       </div>
 
@@ -145,8 +145,8 @@ export default function WorkerPairingStep({
         <div className="flex items-start gap-3">
           <Waypoints className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            This release only imports and validates the worker. It does not write
-            remote config or mutate the host for you yet.
+            Best for a MacBook Air or Mac mini you keep nearby. This release imports and
+            validates the worker first, then leaves the remote-machine steps explicit.
           </p>
         </div>
       </div>
