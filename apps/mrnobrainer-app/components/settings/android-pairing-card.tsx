@@ -10,6 +10,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 type PairingContext = {
   serverUrl: string;
@@ -42,6 +43,7 @@ function formatTimestamp(value: string | null) {
 }
 
 export function AndroidPairingCard() {
+  const isTauriRuntime = hasTauriRuntime();
   const [pairingContext, setPairingContext] = useState<PairingContext | null>(null);
   const [tokens, setTokens] = useState<CrossDeviceToken[]>([]);
   const [activeToken, setActiveToken] = useState<CreatedCrossDeviceToken | null>(null);
@@ -75,8 +77,43 @@ export function AndroidPairingCard() {
   }
 
   useEffect(() => {
+    if (!isTauriRuntime) {
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     loadState();
-  }, []);
+  }, [isTauriRuntime]);
+
+  if (!isTauriRuntime) {
+    return (
+      <Card className="border-border bg-card overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex items-start gap-4 p-4">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-foreground">
+              <Smartphone className="h-5 w-5 text-background" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Pair Android device
+                </h3>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  desktop only
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Pairing codes depend on the desktop oracle runtime. Browser preview keeps this
+                card read-only instead of calling Tauri pairing commands.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const pairingPayload = useMemo(() => {
     if (!pairingContext || !activeToken) {

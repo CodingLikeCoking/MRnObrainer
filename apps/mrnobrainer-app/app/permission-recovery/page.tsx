@@ -5,6 +5,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import {
   Check,
   CheckCircle2,
@@ -387,13 +388,98 @@ export default function PermissionRecoveryPage() {
             </p>
           </div>
         ) : browserPreviewMode ? (
-          <div className="w-full max-w-sm space-y-4 text-center">
-            <div className="space-y-1">
-              <h2 className="text-sm font-medium text-foreground">desktop-only permission recovery</h2>
-              <p className="text-xs text-muted-foreground">
-                previewing the fallback UI in browser mode — use{" "}
-                <span className="text-foreground">bun run tauri dev</span> to test the real
-                screen, mic, and accessibility recovery flow.
+          <div className="w-full max-w-3xl space-y-5">
+            <Card className="border-white/60 bg-white/75 shadow-[0_28px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+              <CardHeader className="space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[20px] bg-sky-500/12 text-sky-700 dark:text-sky-300">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+                <div className="space-y-2 text-center">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Browser preview
+                  </p>
+                  <CardTitle className="text-3xl tracking-tight">
+                    Desktop-only permission recovery
+                  </CardTitle>
+                  <p className="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground">
+                    You are previewing the fallback UI in browser mode. Use{" "}
+                    <span className="font-medium text-foreground">bun run tauri dev</span> to test
+                    the real screen, mic, and accessibility recovery flow.
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-[24px] border border-border/60 bg-background/70 p-4 text-left">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Monitor className="h-4 w-4 text-sky-600" />
+                      Screen Recording
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Keeps the timeline current and lets local capture resume after macOS prompts.
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-border/60 bg-background/70 p-4 text-left">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Mic className="h-4 w-4 text-sky-600" />
+                      Microphone
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Restores spoken context and meeting recall without leaving this Mac by default.
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-border/60 bg-background/70 p-4 text-left">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Keyboard className="h-4 w-4 text-sky-600" />
+                      Accessibility
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Improves richer app context and shortcut awareness when you explicitly allow it.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-border/60 bg-background/70 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Preview checklist
+                  </p>
+                  <ol className="mt-3 space-y-2 text-sm leading-6 text-foreground">
+                    <li className="flex gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500/12 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                        1
+                      </span>
+                      <span>Launch the desktop shell with Tauri so macOS permission APIs are available.</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500/12 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                        2
+                      </span>
+                      <span>Open this recovery surface only when screen, mic, or accessibility access needs to be restored.</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-500/12 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                        3
+                      </span>
+                      <span>Expect the desktop app to re-check permissions automatically and close this window when capture resumes.</span>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button asChild size="lg" className="h-11 rounded-full px-6">
+                    <Link href="/onboarding">Open onboarding preview</Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="h-11 rounded-full px-6">
+                    <Link href="/">Back to dashboard preview</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="rounded-[28px] border border-border/60 bg-background/70 px-5 py-4 text-center">
+              <p className="text-xs leading-6 text-muted-foreground">
+                This browser preview stays local and read-only. It does not request permissions or
+                modify external systems.
               </p>
             </div>
           </div>

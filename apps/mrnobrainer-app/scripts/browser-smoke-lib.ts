@@ -22,6 +22,18 @@ export const DEFAULT_BROWSER_SMOKE_CHECKS: BrowserSmokeCheck[] = [
     forbiddenTexts: ["Unhandled Runtime Error", "Application error"],
   },
   {
+    slug: "health",
+    path: "/?section=health",
+    requiredTexts: ["keep permissions and updates obvious", "signed updater policy"],
+    forbiddenTexts: ["Unhandled Runtime Error", "Application error"],
+  },
+  {
+    slug: "workers",
+    path: "/?section=workers",
+    requiredTexts: ["keep this mac as the oracle", "use another mac or ssh-accessible worker"],
+    forbiddenTexts: ["Unhandled Runtime Error", "Application error"],
+  },
+  {
     slug: "onboarding",
     path: "/onboarding",
     requiredTexts: ["local by default", "keep your work history on this mac"],
@@ -30,7 +42,7 @@ export const DEFAULT_BROWSER_SMOKE_CHECKS: BrowserSmokeCheck[] = [
   {
     slug: "permission-recovery",
     path: "/permission-recovery",
-    requiredTexts: ["desktop-only permission recovery", "bun run tauri dev"],
+    requiredTexts: ["desktop-only permission recovery", "preview checklist", "bun run tauri dev"],
     forbiddenTexts: ["Unhandled Runtime Error", "Application error"],
   },
   {

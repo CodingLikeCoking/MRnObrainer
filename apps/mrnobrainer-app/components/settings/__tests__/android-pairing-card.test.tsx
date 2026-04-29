@@ -9,6 +9,10 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invokeMock(...args),
 }));
 
+vi.mock("@/lib/runtime-environment", () => ({
+  hasTauriRuntime: () => true,
+}));
+
 vi.mock("qrcode.react", () => ({
   QRCodeSVG: ({ value }: { value: string }) => (
     <div data-testid="qr-code">{value}</div>

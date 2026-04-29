@@ -18,10 +18,12 @@ import { platform } from "@tauri-apps/plugin-os";
 import { invoke } from "@tauri-apps/api/core";
 import { Command } from "@tauri-apps/plugin-shell";
 import posthog from "posthog-js";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 const API = "http://localhost:3030";
 
 export function AppleIntelligenceCard() {
+  const isTauriRuntime = hasTauriRuntime();
   const [os, setOs] = useState<string>("");
   const [aiStatus, setAiStatusRaw] = useState<
     "unknown" | "available" | "unavailable"
@@ -64,11 +66,21 @@ export function AppleIntelligenceCard() {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!isTauriRuntime) {
+      setOs("browser");
+      return;
+    }
+
     setOs(platform());
-  }, []);
+  }, [isTauriRuntime]);
 
   // Load AI enabled state — default to true only on macOS 26+ with 32GB+ RAM
   useEffect(() => {
+    if (!isTauriRuntime) {
+      setEnabled(false);
+      return;
+    }
+
     try {
       const stored = localStorage?.getItem("apple-intelligence-enabled");
       if (stored !== null) {
@@ -87,7 +99,7 @@ export function AppleIntelligenceCard() {
         setEnabled(false);
       }
     } catch {}
-  }, []);
+  }, [isTauriRuntime]);
 
   const toggleEnabled = (val: boolean) => {
     setEnabled(val);
@@ -160,10 +172,16 @@ export function AppleIntelligenceCard() {
   }, [enabled, setAiStatus]);
 
   useEffect(() => {
+    if (!isTauriRuntime) {
+      setAiStatus("unavailable");
+      setAiStatusReason("Available in the desktop app.");
+      return;
+    }
+
     checkStatus();
     const interval = setInterval(checkStatus, 30000);
     return () => clearInterval(interval);
-  }, [checkStatus]);
+  }, [checkStatus, isTauriRuntime]);
 
   // Check reminders status via Tauri command
   const checkRemindersStatus = useCallback(async () => {
@@ -195,10 +213,10 @@ export function AppleIntelligenceCard() {
   }, []);
 
   useEffect(() => {
-    if (aiStatus === "available") {
+    if (isTauriRuntime && aiStatus === "available") {
       checkRemindersStatus();
     }
-  }, [aiStatus, checkRemindersStatus]);
+  }, [aiStatus, checkRemindersStatus, isTauriRuntime]);
 
   // Auto-save custom prompt (debounced 1s)
   const onCustomPromptChange = (value: string) => {
@@ -306,6 +324,42 @@ export function AppleIntelligenceCard() {
     }
     setIsScanning(false);
   };
+
+  if (!isTauriRuntime) {
+    return (
+      <Card className="border-border bg-card overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex items-start gap-4 p-4">
+            <div className="flex-shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/apple-intelligence-logo.svg"
+                alt="Apple Intelligence"
+                className="h-10 w-10 rounded-xl"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Apple Intelligence
+                </h3>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  desktop only
+                </span>
+              </div>
+
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Daily summaries and Apple Reminders automation stay inside the desktop app.
+                Browser preview keeps this card read-only instead of calling Tauri-only runtime
+                APIs.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (os && os !== "macos") return null;
 

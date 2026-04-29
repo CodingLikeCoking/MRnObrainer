@@ -20,6 +20,7 @@ import {
 import { platform } from "@tauri-apps/plugin-os";
 import { invoke } from "@tauri-apps/api/core";
 import posthog from "posthog-js";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 interface CalendarEventItem {
   id: string;
@@ -35,6 +36,7 @@ interface CalendarEventItem {
 }
 
 export function CalendarCard() {
+  const isTauriRuntime = hasTauriRuntime();
   const [os, setOs] = useState<string>("");
   const [enabled, setEnabled] = useState(false);
   const [authorized, setAuthorized] = useState(false);
@@ -45,8 +47,13 @@ export function CalendarCard() {
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
   useEffect(() => {
+    if (!isTauriRuntime) {
+      setOs("browser");
+      return;
+    }
+
     setOs(platform());
-  }, []);
+  }, [isTauriRuntime]);
 
   // Load enabled state from localStorage
   useEffect(() => {
@@ -98,17 +105,45 @@ export function CalendarCard() {
   }, []);
 
   useEffect(() => {
-    if (os === "macos" || os === "windows") {
+    if (isTauriRuntime && (os === "macos" || os === "windows")) {
       checkStatus();
     }
-  }, [os, checkStatus]);
+  }, [os, checkStatus, isTauriRuntime]);
 
   // Fetch events when authorized + enabled
   useEffect(() => {
-    if (authorized && enabled) {
+    if (isTauriRuntime && authorized && enabled) {
       fetchEvents();
     }
-  }, [authorized, enabled, fetchEvents]);
+  }, [authorized, enabled, fetchEvents, isTauriRuntime]);
+
+  if (!isTauriRuntime) {
+    return (
+      <Card className="border-border bg-card overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex items-start gap-4 p-4">
+            <div className="flex-shrink-0">
+              <Calendar className="h-10 w-10 rounded-xl bg-muted p-2 text-muted-foreground" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">Calendar</h3>
+                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  desktop only
+                </span>
+              </div>
+
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                On-device calendar access stays in the desktop app. Browser preview keeps this
+                card read-only so Settings can render without Tauri calendar APIs.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Authorize calendar access
   const authorizeCalendar = async () => {

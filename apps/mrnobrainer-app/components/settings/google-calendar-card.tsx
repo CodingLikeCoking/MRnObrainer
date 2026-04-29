@@ -21,6 +21,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { commands } from "@/lib/utils/tauri";
 import posthog from "posthog-js";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 const API_BASE = "https://screenpi.pe/api/google-calendar";
 
@@ -38,6 +39,7 @@ interface CalendarEventItem {
 }
 
 export function GoogleCalendarCard() {
+  const isTauriRuntime = hasTauriRuntime();
   const { settings } = useSettings();
   const token = settings.user?.token;
 
@@ -94,8 +96,10 @@ export function GoogleCalendarCard() {
   }, [token, enabled]);
 
   useEffect(() => {
+    if (!isTauriRuntime) return;
+
     fetchStatus();
-  }, [fetchStatus]);
+  }, [fetchStatus, isTauriRuntime]);
 
   // Fetch upcoming events
   const fetchEvents = useCallback(async () => {
@@ -123,13 +127,15 @@ export function GoogleCalendarCard() {
 
   // Fetch events when connected + enabled
   useEffect(() => {
-    if (connected && enabled) {
+    if (isTauriRuntime && connected && enabled) {
       fetchEvents();
     }
-  }, [connected, enabled, fetchEvents]);
+  }, [connected, enabled, fetchEvents, isTauriRuntime]);
 
   // Listen for deep link auth result
   useEffect(() => {
+    if (!isTauriRuntime) return;
+
     const unlisten = listen<{ success: boolean; error?: string }>(
       "google-calendar-auth-result",
       async (event) => {
@@ -148,7 +154,41 @@ export function GoogleCalendarCard() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [fetchStatus]);
+  }, [fetchStatus, isTauriRuntime]);
+
+  if (!isTauriRuntime) {
+    return (
+      <Card className="border-border bg-card overflow-hidden">
+        <CardContent className="p-0">
+          <div className="flex items-start gap-4 p-4">
+            <div className="flex-shrink-0">
+              <img
+                src="/google-calendar-icon.svg"
+                alt="Google Calendar"
+                className="w-10 h-10 rounded-xl"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Google Calendar
+                </h3>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  desktop only
+                </span>
+              </div>
+
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Calendar auth and sync open inside the desktop app. Browser preview keeps this
+                card read-only so the rest of Settings can render safely.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Connect flow — opens in-app webview (same as login) so we can intercept
   // the screenpipe:// deep-link redirect. Safari blocks custom-scheme redirects.

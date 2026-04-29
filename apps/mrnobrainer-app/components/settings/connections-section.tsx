@@ -26,6 +26,7 @@ import { GoogleCalendarCard } from "./google-calendar-card";
 import { IcsCalendarCard } from "./ics-calendar-card";
 import { OpenClawCard } from "./openclaw-card";
 import { PaperclipCard } from "./paperclip-card";
+import { hasTauriRuntime } from "@/lib/runtime-environment";
 
 const GITHUB_RELEASES_APIS = [
   `https://api.github.com/repos/${MRNOBRAINER_GITHUB_REPO}/releases`,
@@ -407,17 +408,22 @@ function ClaudeCodeCard() {
 }
 
 function ChatGptConnectionCard() {
+  const isTauriRuntime = hasTauriRuntime();
   const [status, setStatus] = useState<"idle" | "loading" | "logged_in">("idle");
 
   useEffect(() => {
+    if (!isTauriRuntime) return;
+
     commands.chatgptOauthStatus().then((res) => {
       if (res.status === "ok" && res.data.logged_in) {
         setStatus("logged_in");
       }
     });
-  }, []);
+  }, [isTauriRuntime]);
 
   const handleLogin = async () => {
+    if (!isTauriRuntime) return;
+
     setStatus("loading");
     try {
       const res = await commands.chatgptOauthLogin();
@@ -432,6 +438,8 @@ function ChatGptConnectionCard() {
   };
 
   const handleLogout = async () => {
+    if (!isTauriRuntime) return;
+
     setStatus("loading");
     await commands.chatgptOauthLogout();
     setStatus("idle");
@@ -461,6 +469,11 @@ function ChatGptConnectionCard() {
                   connected
                 </span>
               )}
+              {!isTauriRuntime && (
+                <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+                  desktop only
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               Use your ChatGPT Plus/Pro subscription as an AI provider. No API key needed.
@@ -471,6 +484,7 @@ function ChatGptConnectionCard() {
                   onClick={handleLogout}
                   variant="outline"
                   size="sm"
+                  disabled={!isTauriRuntime}
                   className="gap-1.5 h-7 text-xs"
                 >
                   <LogOut className="h-3 w-3" />
@@ -479,7 +493,7 @@ function ChatGptConnectionCard() {
               ) : (
                 <Button
                   onClick={handleLogin}
-                  disabled={status === "loading"}
+                  disabled={status === "loading" || !isTauriRuntime}
                   size="sm"
                   className="gap-1.5 h-7 text-xs"
                 >
@@ -496,6 +510,11 @@ function ChatGptConnectionCard() {
                   )}
                 </Button>
               )}
+              {!isTauriRuntime ? (
+                <p className="self-center text-xs text-muted-foreground">
+                  Browser preview disables desktop OAuth actions.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

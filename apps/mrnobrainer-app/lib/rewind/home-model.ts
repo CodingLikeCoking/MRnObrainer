@@ -71,6 +71,45 @@ export type RewindOrchestrationRunStatus =
 export type RewindProofBundleStatus = "pending" | "ready" | "degraded";
 export type RewindProofReplayStatus = "pending" | "ready" | "failed" | "not-requested";
 export type RewindSyncMode = "local-only" | "paperclip-shadow" | "paperclip-primary";
+export type RewindWorkerSetupMode =
+  | "remote-mac-tailscale"
+  | "existing-ssh-host"
+  | "nearby-mac";
+export type RewindWorkerReachabilityState =
+  | "unknown"
+  | "discovered"
+  | "reachable"
+  | "unreachable";
+export type RewindWorkerReadinessState =
+  | "discovered"
+  | "ready-to-import"
+  | "waiting-for-ssh"
+  | "waiting-for-tailscale"
+  | "imported"
+  | "needs-attention";
+
+export interface RewindWorkerChecklistState {
+  tailscaleSeen: boolean;
+  sshReachable: boolean;
+  keyValidated: boolean;
+  imported: boolean;
+  remoteSetupPending: boolean;
+}
+
+export interface RewindWorkerSetupMetadata {
+  displayName: string;
+  discoverySource: string;
+  setupMode: RewindWorkerSetupMode;
+  preferredAddress: string;
+  fallbackAddress: string | null;
+  reachabilityState: RewindWorkerReachabilityState;
+  readinessState: RewindWorkerReadinessState;
+  caveats: string[];
+  lastValidatedAt: string | null;
+  lastValidationError: string | null;
+  importedAt: string | null;
+  checklist: RewindWorkerChecklistState;
+}
 
 export type RewindDashboardWidget =
   | "goal"
@@ -220,6 +259,7 @@ export interface RewindClawWorker {
   port?: number;
   authMode?: "ssh-key" | "password" | "unknown";
   importSource?: "openclaw-sync-config" | "ssh-discovery" | "manual";
+  workerSetup?: RewindWorkerSetupMetadata;
 }
 
 export interface RewindAutomationGuardrails {

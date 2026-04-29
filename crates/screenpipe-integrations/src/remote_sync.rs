@@ -603,6 +603,24 @@ fn parse_known_hosts(content: &str) -> Vec<DiscoveredHost> {
     hosts
 }
 
+fn tailscale_dns_name(peer: &serde_json::Value) -> Option<String> {
+    peer.get("DNSName")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_end_matches('.').to_string())
+        .filter(|s| !s.is_empty())
+}
+
+fn tailscale_label(peer: &serde_json::Value, fallback_ip: &str) -> String {
+    tailscale_dns_name(peer)
+        .or_else(|| {
+            peer.get("HostName")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_else(|| fallback_ip.to_string())
+}
+
 async fn discover_tailscale() -> Vec<DiscoveredHost> {
     let out = match tokio::process::Command::new("tailscale")
         .args(["status", "--json"])
@@ -627,19 +645,20 @@ async fn discover_tailscale() -> Vec<DiscoveredHost> {
                 .unwrap_or_default();
             let online = peer.get("Online").and_then(|v| v.as_bool()).unwrap_or(false);
             if !ip.is_empty() && online {
-                let label = peer
-                    .get("DNSName")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.trim_end_matches('.'))
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| peer.get("HostName").and_then(|v| v.as_str()))
-                    .unwrap_or(ip);
+                let dns_name = tailscale_dns_name(peer);
+                let label = tailscale_label(peer, ip);
+                let host = dns_name.clone().unwrap_or_else(|| ip.to_string());
+                let source = if host == ip {
+                    format!("tailscale ({})", label)
+                } else {
+                    format!("tailscale ({}; {})", label, ip)
+                };
                 hosts.push(DiscoveredHost {
-                    host: ip.to_string(),
+                    host,
                     port: 22,
                     user: None,
                     key_path: None,
-                    source: format!("tailscale ({})", label),
+                    source,
                 });
             }
         }
@@ -669,6 +688,28 @@ mod tests {
         assert!(hosts.iter().any(|h| h.host == "1.2.3.4"));
         assert!(hosts.iter().any(|h| h.host == "vps.com" && h.port == 2222));
         assert!(!hosts.iter().any(|h| h.host.starts_with('|')));
+    }
+
+    #[test]
+    fn test_tailscale_prefers_dns_name_when_available() {
+        let peer = serde_json::json!({
+            "DNSName": "oracle-mini.tailnet.ts.net.",
+            "HostName": "oracle-mini",
+        });
+        assert_eq!(tailscale_dns_name(&peer).as_deref(), Some("oracle-mini.tailnet.ts.net"));
+        assert_eq!(tailscale_label(&peer, "100.72.0.4"), "oracle-mini.tailnet.ts.net");
+    }
+
+    #[test]
+    fn test_tailscale_label_falls_back_to_hostname_then_ip() {
+        let peer = serde_json::json!({
+            "HostName": "studio-mac-mini",
+        });
+        assert_eq!(tailscale_dns_name(&peer), None);
+        assert_eq!(tailscale_label(&peer, "100.72.0.8"), "studio-mac-mini");
+
+        let peer_without_names = serde_json::json!({});
+        assert_eq!(tailscale_label(&peer_without_names, "100.72.0.9"), "100.72.0.9");
     }
 
     #[test]

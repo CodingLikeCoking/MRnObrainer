@@ -49,6 +49,12 @@ describe("browser smoke config", () => {
   });
 
   it("keeps browser smoke focused on trust-critical pages and artifact output", () => {
+    const healthCheck = DEFAULT_BROWSER_SMOKE_CHECKS.find(
+      (check) => check.slug === "health",
+    );
+    const workersCheck = DEFAULT_BROWSER_SMOKE_CHECKS.find(
+      (check) => check.slug === "workers",
+    );
     const onboardingCheck = DEFAULT_BROWSER_SMOKE_CHECKS.find(
       (check) => check.slug === "onboarding",
     );
@@ -64,9 +70,19 @@ describe("browser smoke config", () => {
     );
     expect(DEFAULT_BROWSER_SMOKE_CHECKS.map((check) => check.slug)).toEqual([
       "home",
+      "health",
+      "workers",
       "onboarding",
       "permission-recovery",
       "settings",
+    ]);
+    expect(healthCheck?.requiredTexts).toEqual([
+      "keep permissions and updates obvious",
+      "signed updater policy",
+    ]);
+    expect(workersCheck?.requiredTexts).toEqual([
+      "keep this mac as the oracle",
+      "use another mac or ssh-accessible worker",
     ]);
     expect(onboardingCheck?.requiredTexts).toEqual([
       "local by default",
@@ -74,6 +90,7 @@ describe("browser smoke config", () => {
     ]);
     expect(permissionRecoveryCheck?.requiredTexts).toEqual([
       "desktop-only permission recovery",
+      "preview checklist",
       "bun run tauri dev",
     ]);
   });
